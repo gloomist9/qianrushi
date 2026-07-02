@@ -26,7 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "Emm_V5.h"
-#include "usefulfunction.h"
+#include "motion.h"
 #include "view.h"
 #include "distance.h"
 #include <stdio.h>
@@ -36,6 +36,7 @@
 #include "motioncmd.h"
 #include "command_queue.h"
 #include "serial.h"
+#include "planner.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,6 +60,12 @@
 extern uint8_t RxByte;
 extern volatile uint8_t overflag;
 extern uint8_t uart_rx_buf[64];
+
+#define MOTOR_RX_BUF_SIZE 128
+extern uint8_t usart1_rx_buf[MOTOR_RX_BUF_SIZE];
+extern uint8_t usart1_frame_buf[MOTOR_RX_BUF_SIZE];
+
+
 int16_t x=0,y=0;
 //lo,ld,ro,rd
 uint16_t lo[]={0,0};
@@ -123,15 +130,16 @@ int main(void)
   MX_UART4_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  //__HAL_UART_CLEAR_IDLEFLAG(&huart3); 											// 清除IDLE标志
-	//__HAL_UART_ENABLE_IT(&huart3, UART_IT_IDLE); 							// 使能串UART3 IDLE中断
-	//HAL_UART_Receive_DMA(&huart3,uart_rx_buf, CMD_LEN);       // 开启DMA接收模式
+  //__HAL_UART_CLEAR_IDLEFLAG(&huart3); 											// 清除IDLE标志	
+  HAL_UART_Receive_DMA(&huart1,usart1_rx_buf, MOTOR_RX_BUF_SIZE);
+	__HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+
   //test=HAL_UARTEx_ReceiveToIdle_DMA(&huart3,distance_buffer,buffer);
   HAL_UARTEx_ReceiveToIdle_DMA(&huart3,uart_rx_buf,sizeof(uart_rx_buf));
 	HAL_UART_Receive_IT(&huart4, &RxByte, 1);
-  state.view=0;
-  state.go=0;
-  state.over=0;
+ // state.view=0;
+ // state.go=0;
+ // state.over=0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -143,12 +151,16 @@ int main(void)
 ***	上电延时500毫秒等待闭环初始化完毕
 **********************************************************/
 	//while(rxFrameFlag == false); rxFrameFlag = false;
-
+  planner_init();
   queue_init();
  // parser_init();
   while (1)
   {
     serial_process();
+
+    planner_process();
+
+    motor_poll();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
