@@ -20,7 +20,7 @@ void serial_init(void);
  * @note
  * 在 USART IDLE 中断里调用
  */
-void serial_rx_idle_callback(void);
+void serial_rx_callback(uint8_t *buf, uint16_t size);
 
 /**
  * @brief 主循环调用（处理完整行）

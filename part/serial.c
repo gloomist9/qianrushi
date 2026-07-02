@@ -5,15 +5,7 @@
 volatile uint16_t uart_rx_len = 0;
 uint8_t uart_rx_buf[64];
 
-/*==================== 外部UART ====================*/
-extern UART_HandleTypeDef huart1;
-
 /*==================== 接收缓冲区 ====================*/
-
-/**
- * DMA原始接收buffer
- */
-static uint8_t rx_dma_buf[128];
 
 /**
  * 行缓冲区（拼完整一行G-code）
@@ -30,29 +22,20 @@ static uint16_t line_index = 0;
  */
 static volatile bool line_ready = false;
 
-/*==================== 初始化 ====================*/
-
-void serial_init(void)
-{
-    HAL_UART_Receive_DMA(&huart1, rx_dma_buf, sizeof(rx_dma_buf));
-}
-
 /*==================== IDLE中断回调 ====================*/
 
 
 
-void serial_rx_idle_callback(void)
+void serial_rx_callback(uint8_t *buf, uint16_t size)
 {
-    uint16_t len = sizeof(rx_dma_buf) - __HAL_DMA_GET_COUNTER(huart1.hdmarx);
-
-    for(uint16_t i = 0; i < len; i++)
+    for(uint16_t i = 0; i < size; i++)
     {
-        char c = (char)rx_dma_buf[i];
+        char c = (char)buf[i];
 
-        /*------------------------
-          行结束判断
-        ------------------------*/
-        if(c == '\n' || c == '\r')
+        if(c == '\r')
+            continue;
+
+        if(c == '\n')
         {
             if(line_index > 0)
             {
@@ -63,21 +46,22 @@ void serial_rx_idle_callback(void)
         }
         else
         {
-            /* 防止溢出 */
-            if(line_index < sizeof(line_buf) - 1)
+            if(line_index < sizeof(line_buf)-1)
             {
                 line_buf[line_index++] = c;
             }
             else
             {
-                /* 溢出直接丢弃 */
+                /* 一行太长，丢弃 */
                 line_index = 0;
             }
         }
     }
 
-    /* 重新启动DMA */
-    HAL_UART_Receive_DMA(&huart1, rx_dma_buf, sizeof(rx_dma_buf));
+    HAL_UARTEx_ReceiveToIdle_DMA(
+        &huart3,
+        uart_rx_buf,
+        sizeof(uart_rx_buf));
 }
 
 /*==================== 主循环处理 ====================*/

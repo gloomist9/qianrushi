@@ -137,12 +137,15 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	HAL_Delay(500);
-	Emm_V5_Pos_Control(1, 0, 100, 0, 3200, 0, 0);
+	//Emm_V5_Pos_Control(1, 0, 100, 0, 3200, 0, 0);
 	
 /**********************************************************
 ***	上电延时500毫秒等待闭环初始化完毕
 **********************************************************/
 	//while(rxFrameFlag == false); rxFrameFlag = false;
+
+  queue_init();
+ // parser_init();
   while (1)
   {
     serial_process();
@@ -200,14 +203,15 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-    if (huart==&huart3)
-    {
-      if(huart != &huart3)
-        return;
+{ 
+  if(huart != &huart3)
+  {
+    return;
+  }    
+  serial_rx_callback(uart_rx_buf, Size);
 
-      serial_rx_idle_callback();
-    }
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart3,uart_rx_buf,sizeof(uart_rx_buf)
+);
 }
 /* USER CODE END 4 */
 
