@@ -4,15 +4,13 @@
 #include "motioncmd.h"
 #include "motion.h"
 #include "Emm_V5.h"
+#include "motor_serial.h"
 #include <stdbool.h>
 
-extern volatile uint8_t interrupt, overflag;
-
-static bool busy = false;
-static uint32_t last_poll = 0;//ÉÏ´ÎÂÖÑ¯Ê±¿Ì
+static uint32_t last_poll = 0;//ä¸Šæ¬¡è½®è¯¢æ—¶é—´
 static uint8_t poll_motor = 0;
 
-/* µ±Ç°ÊÇ·ñÕıÔÚÔË¶¯ */
+/* å½“å‰æ˜¯å¦æ­£åœ¨è¿åŠ¨ */
 static bool planner_busy = false;
 
 void planner_init(void)
@@ -24,7 +22,7 @@ void planner_process(void)
 {
     MotionCmd cmd;
 
-    /* µç»ú»¹Ã»Íê³É */
+    /* ç­‰å¾…è¿åŠ¨å®Œæˆ */
     if(planner_busy)
     {
         if(motion_is_busy())
@@ -33,26 +31,27 @@ void planner_process(void)
         planner_busy = false;
     }
 
-    /* Ã»ÓĞĞÂµÄÔË¶¯ */
+    /* æ²¡æœ‰æ–°çš„è¿åŠ¨æŒ‡ä»¤ */
     if(!queue_pop(&cmd))
         return;
 
-    /* ·¢¸øÔË¶¯²ã */
+    /* æ‰§è¡Œè¿åŠ¨æŒ‡ä»¤ */
     motion_execute(&cmd);
 
     planner_busy = true;
 }
 
-void motor_poll(void)//ÂÖÑ¯µç»ú
+void motor_poll(void)//è½®è¯¢ç”µæœºçŠ¶æ€ + çœ‹é—¨ç‹—
 {
     if(HAL_GetTick() - last_poll < 5)
         return;
 
     last_poll = HAL_GetTick();
 
+    /* äº¤æ›¿æŸ¥è¯¢ä¸¤ä¸ªç”µæœºçš„çŠ¶æ€æ ‡å¿— */
     if(poll_motor == 0)
     {
-        Emm_V5_Read_Sys_Params(1,S_FLAG);//·¢ËÍ²éÑ¯ÃüÁî
+        Emm_V5_Read_Sys_Params(1,S_FLAG);//å‘é€æŸ¥è¯¢å‘½ä»¤
         poll_motor = 1;
     }
     else
@@ -60,6 +59,7 @@ void motor_poll(void)//ÂÖÑ¯µç»ú
         Emm_V5_Read_Sys_Params(2,S_FLAG);
         poll_motor = 0;
     }
+
+    /* æ£€æµ‹ç”µæœºæ˜¯å¦è¶…æ—¶æ— å“åº” */
+    motor_watchdog();
 }
-
-

@@ -37,6 +37,7 @@
 #include "command_queue.h"
 #include "serial.h"
 #include "planner.h"
+#include "motor_serial.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -72,14 +73,6 @@ uint16_t lo[]={0,0};
 uint16_t ld[]={0,0};
 uint16_t ro[]={0,0};
 uint16_t rd[]={0,0};
-uint16_t test=2;
-
-/* 状态机标志位 */
-struct {
-	uint8_t view;
-	uint8_t go;
-	uint8_t over;
-} state;
 
 
 /* USER CODE END PV */
@@ -131,8 +124,6 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   //__HAL_UART_CLEAR_IDLEFLAG(&huart3); 											// 清除IDLE标志	
-  HAL_UART_Receive_DMA(&huart1,usart1_rx_buf, MOTOR_RX_BUF_SIZE);
-	__HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
 
   //test=HAL_UARTEx_ReceiveToIdle_DMA(&huart3,distance_buffer,buffer);
   HAL_UARTEx_ReceiveToIdle_DMA(&huart3,uart_rx_buf,sizeof(uart_rx_buf));
@@ -153,6 +144,7 @@ int main(void)
 	//while(rxFrameFlag == false); rxFrameFlag = false;
   planner_init();
   queue_init();
+  motor_serial_init();
  // parser_init();
   while (1)
   {

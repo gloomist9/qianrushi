@@ -1,5 +1,5 @@
-#ifndef PERSE_H
-#define PERSE_H
+#ifndef PARSE_H
+#define PARSE_H
 
 #include "main.h"
 
@@ -21,11 +21,6 @@ typedef enum
 
     PARSER_QUEUE_FULL
 } ParserResult;
-
-/**
- * @brief 初始化Parser
- */
-void parser_init(void);
 
 /**
  * @brief 解析一行G-code

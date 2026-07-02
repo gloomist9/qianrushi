@@ -236,29 +236,7 @@ void DMA1_Stream3_IRQHandler(void)
 /**
   * @brief This function handles USART1 global interrupt.
   */
-void USART1_IRQHandler(void)
-{
-  /* USER CODE BEGIN USART1_IRQn 0 */
 
-	if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE) != RESET)
-	{
-		__HAL_UART_CLEAR_IDLEFLAG(&huart1); // ???IDLE???
-
-		HAL_UART_DMAStop(&huart1); // ??DMA?????????????DMA???????????
-
-		rxCount = CMD_LEN - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx);
-		 
-		rxFrameFlag = true; // ??��??????????????��
-		
-		HAL_UART_Receive_DMA(&huart1, (uint8_t *)rxCmd, CMD_LEN);
-	}
-
-  /* USER CODE END USART1_IRQn 0 */
-  HAL_UART_IRQHandler(&huart1);
-  /* USER CODE BEGIN USART1_IRQn 1 */
-
-  /* USER CODE END USART1_IRQn 1 */
-}
 
 /**
   * @brief This function handles USART3 global interrupt.

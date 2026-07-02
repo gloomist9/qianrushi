@@ -27,8 +27,8 @@
  *
  ******************************************************************************
  */
-#ifndef COMMANDE_QUEUE_H
-#define COMMANDE_QUEUE_H
+#ifndef COMMAND_QUEUE_H
+#define COMMAND_QUEUE_H
 //保存等待执行的运动命令
 
 #include "main.h"

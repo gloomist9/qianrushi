@@ -3,16 +3,10 @@
 
 #include "main.h"
 
-#define MOTOR_RX_BUF_SIZE 128
+/* =========================
+   状态定义
+   ========================= */
 
-uint8_t usart1_rx_buf[MOTOR_RX_BUF_SIZE];
-uint8_t usart1_frame_buf[MOTOR_RX_BUF_SIZE];
-
-/*======================== 电机状态 ========================*/
-
-/**
- * @brief 电机运行状态
- */
 typedef enum
 {
     MOTOR_IDLE = 0,
@@ -21,18 +15,34 @@ typedef enum
     MOTOR_TIMEOUT
 } MotorState;
 
-/**
- * @brief 电机信息（给上层用）
- */
+/* =========================
+   电机结构体
+   ========================= */
+
 typedef struct
 {
-    MotorState state;        // 当前状态
+    uint8_t id;
 
-    uint8_t online;          // 是否通信正常
+    MotorState state;
 
-    uint32_t last_tick;      // 最后一次收到回复时间（ms）
+    uint8_t online;
+
+    uint32_t last_tick;
+
+    uint8_t expect_reply;
 
 } MotorInfo;
 
+/* =========================
+   外部接口
+   ========================= */
+
+void motor_serial_init(void);
+void motor_frame_parse(uint8_t *buf, uint16_t len);
+
+uint8_t motion_is_busy(void);
+void motor_watchdog(void);
+
+MotorInfo* get_motor_by_id(uint8_t id);
 
 #endif
