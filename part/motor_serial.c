@@ -3,28 +3,28 @@
 #include "stdio.h"
 
 /* =========================
-   »ù´¡¶¨Òå
+   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
    ========================= */
 
 #define MOTOR_RX_BUF_SIZE 128
 #define MOTOR_FRAME_MAX   128
 
 /* =========================
-   ½ÓÊÕ»º³å
+   ï¿½ï¿½ï¿½Õ»ï¿½ï¿½ï¿½
    ========================= */
 
 uint8_t motor_dma_buf[MOTOR_RX_BUF_SIZE];
 uint8_t motor_frame_buf[MOTOR_FRAME_MAX];
 
 /* =========================
-   µç»ú¶ÔÏó
+   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
    ========================= */
 
 MotorInfo motor1 = {0};
 MotorInfo motor2 = {0};
 
 /* =========================
-   »ñÈ¡µç»ú
+   ï¿½ï¿½È¡ï¿½ï¿½ï¿½
    ========================= */
 
 MotorInfo* get_motor_by_id(uint8_t id)
@@ -35,7 +35,7 @@ MotorInfo* get_motor_by_id(uint8_t id)
 }
 
 /* =========================
-   ³õÊ¼»¯USART1 DMA + IDLE
+   ï¿½ï¿½Ê¼ï¿½ï¿½USART1 DMA + IDLE
    ========================= */
 
 void motor_serial_init(void)
@@ -51,12 +51,12 @@ void motor_serial_init(void)
 }
 
 /* =========================
-   USART1ÖÐ¶ÏÈë¿Ú
+   USART1ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½
    ========================= */
 
 void USART1_IRQHandler(void)
 {
-    /* IDLEÖÐ¶Ï */
+    /* IDLEï¿½Ð¶ï¿½ */
     if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE))
     {
         __HAL_UART_CLEAR_IDLEFLAG(&huart1);
@@ -78,7 +78,7 @@ void USART1_IRQHandler(void)
 }
 
 /* =========================
-   Ö¡½âÎöÈë¿Ú
+   Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
    ========================= */
 
 void motor_frame_parse(uint8_t *buf, uint16_t len)
@@ -89,11 +89,15 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
     {
         uint8_t *frame = &buf[i];
 
-        /* ===== ¹Ì¶¨Ö¡½á¹¹¼ì²é ===== */
+        /* ===== ï¿½Ì¶ï¿½Ö¡ï¿½á¹¹ï¿½ï¿½ï¿½ ===== */
         uint8_t id     = frame[0];
         uint8_t func   = frame[1];
-        uint8_t dlc    = frame[2];
-        uint8_t status  = frame[4];
+        uint16_t dlc   = (uint16_t)frame[2];
+        if(dlc != 0x02)
+        {
+            dlc = ((uint16_t)frame[2] << 8) | frame[3];
+        }
+        uint8_t status = frame[4];
 
         if(func != 0x03) continue;
         if(dlc != 0x02) continue;
@@ -101,7 +105,7 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
         MotorInfo *m = get_motor_by_id(id);
         if(m == NULL) continue;
 
-        /* ===== ×´Ì¬½âÎö£¨ºËÐÄ£©===== */
+        /* ===== ×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½===== */
         switch(status)
         {
             case 0x00:
@@ -125,13 +129,13 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
         m->last_tick = HAL_GetTick();
         m->expect_reply = 0;
 
-        /* ÕÒµ½Ò»Ö¡¾Í¹» */
+        /* ï¿½Òµï¿½Ò»Ö¡ï¿½Í¹ï¿½ */
         break;
     }
 }
 
 /* =========================
-   busyÅÐ¶Ï£¨plannerÓÃ£©
+   busyï¿½Ð¶Ï£ï¿½plannerï¿½Ã£ï¿½
    ========================= */
 
 uint8_t motion_is_busy(void)
@@ -143,7 +147,7 @@ uint8_t motion_is_busy(void)
 }
 
 /* =========================
-   ³¬Ê±¼à¿Ø
+   ï¿½ï¿½Ê±ï¿½ï¿½ï¿½
    ========================= */
 
 #define MOTOR_TIMEOUT_MS 200

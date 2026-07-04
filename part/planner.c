@@ -12,14 +12,17 @@
 extern volatile uint16_t pulse_remaining;
 
 static uint32_t last_poll = 0;//上次轮询时间
-static uint8_t poll_motor = 0;
 
 /* 当前是否正在运动 */
 static bool planner_busy = false;
 
+/* 记录上一次笔的状态，连续同类型指令不重复抬/落笔 */
+static uint8_t pen_is_up = 0;  // 0=未知(首次强制设), 1=已抬起, 2=已落下
+
 void planner_init(void)
 {
     planner_busy = false;
+    pen_is_up = 0;
 }
 
 void planner_process(void)
@@ -39,13 +42,19 @@ void planner_process(void)
     if(!queue_pop(&cmd))
         return;
 
-    /* G0 抬笔（快速移动），G1 落笔（画线） */
-    if (cmd.type == MOTION_G0)
+    /* G0 抬笔, G1 落笔 — 只在状态切换时才动作 */
+    if (cmd.type == MOTION_G0 && pen_is_up != 1)
+    {
         penrise();
-    else if (cmd.type == MOTION_G1)
+        pen_is_up = 1;
+    }
+    else if (cmd.type == MOTION_G1 && pen_is_up != 2)
+    {
         pendown();
+        pen_is_up = 2;
+    }
 
-    /* 等待舵机到位（255 个 PWM 脉冲 ≈ 51ms） */
+    /* 等待舵机到位 */
     while (pulse_remaining > 0);
 
     /* 执行运动指令 */
@@ -56,22 +65,15 @@ void planner_process(void)
 
 void motor_poll(void)//轮询电机状态 + 看门狗
 {
-    if(HAL_GetTick() - last_poll < 5)
+    if(HAL_GetTick() - last_poll < 100)
         return;
 
     last_poll = HAL_GetTick();
 
-    /* 交替查询两个电机的状态标志 */
-    if(poll_motor == 0)
-    {
-        Emm_V5_Read_Sys_Params(1,S_FLAG);//发送查询命令
-        poll_motor = 1;
-    }
-    else
-    {
-        Emm_V5_Read_Sys_Params(2,S_FLAG);
-        poll_motor = 0;
-    }
+    /* 使用 MMCL 批量查询两个电机，和 go() 保持一致的通信协议 */
+    Emm_V5_MMCL_Read_Sys_Params(1, S_FLAG);
+    Emm_V5_MMCL_Read_Sys_Params(2, S_FLAG);
+    Emm_V5_Multi_Motor_Cmd(0);
 
     /* 检测电机是否超时无响应 */
     motor_watchdog();

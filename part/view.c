@@ -62,7 +62,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 					lo[1] = RxBuf[2]  | (RxBuf[3]  << 8);
 			            
 			        ro[0] = RxBuf[4]  | (RxBuf[5]  << 8);
-			        ro[1] = RxBuf[6] | (RxBuf[7]  << 8);
+			        ro[1] = RxBuf[6]  | (RxBuf[7]  << 8);
 			            
 			        ld[0] = RxBuf[8]  | (RxBuf[9]  << 8);
 			        ld[1] = RxBuf[10] | (RxBuf[11] << 8);

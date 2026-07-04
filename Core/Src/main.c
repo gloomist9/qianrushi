@@ -161,7 +161,7 @@ int main(void)
 
     planner_process();
 
-    //motor_poll();
+    motor_poll();
 
     /* USER CODE END WHILE */
 

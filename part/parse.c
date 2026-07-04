@@ -88,6 +88,12 @@ ParserResult parser_parse_line(const char *line)
         return PARSER_OK;
     }
 
+    if(strncmp(line, "G17", 3) == 0)
+    {
+        /* XY 平面选择，2D 绘图仪默认就是 XY 平面，无需处理 */
+        return PARSER_OK;
+    }
+
     if(strncmp(line, "G21", 3) == 0)
     {
         is_mm = true;
@@ -98,7 +104,10 @@ ParserResult parser_parse_line(const char *line)
 
     if(strncmp(line, "G0", 2) == 0 || strncmp(line, "G1", 2) == 0)
     {
-        cmd.type = (line[1] == '0') ? MOTION_G0 : MOTION_G1;
+         /* 跳过'G'后的前导零，找到真正的命令号 (支持 G0/G00/G1/G01) */
+        const char *g = line + 1;
+        while(*g == '0') g++;
+        cmd.type = (*g == '1') ? MOTION_G1 : MOTION_G0;
 
         const char *p = line;
 

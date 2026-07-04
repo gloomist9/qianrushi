@@ -6,10 +6,17 @@
 #include "Emm_V5.h"
 #include "motor_serial.h"
 
-#define STEPS_PER_MM 160.0f//细分
+#define STEPS_PER_MM 80.0f  // X=81.8 Y=78.1 校准取平均
+
+/*
+ * 坐标缩放系数：G-code 坐标 × SCALE → 实际 mm
+ * 如果 G-code 的活动范围大于物理行程，设一个小于 1 的值等比缩小
+ * 例如物理 Y 最大 192mm，G-code Y 最大 300 → SCALE = 192/300 = 0.64
+ */
+#define SCALE_FACTOR 0.64f
 
 /* 引用 motor_serial.c 中定义的电机实例 */
-extern MotorInfo motor1;
+extern MotorInfo motor1; 
 extern MotorInfo motor2;
 
 void go(float X, float Y)//运动到指定位置
@@ -20,8 +27,8 @@ void go(float X, float Y)//运动到指定位置
     uint8_t dirb = 0;
     if(A<0) {A=-A; dira=1;}
     if(B<0) {B=-B; dirb=1;}
-    Emm_V5_MMCL_Pos_Control(1, dira, 50, 254, A, 1, 1);
-    Emm_V5_MMCL_Pos_Control(2, dirb, 50, 254, B, 1, 1);
+    Emm_V5_MMCL_Pos_Control(1, dira, 200, 254, A, 1, 1);
+    Emm_V5_MMCL_Pos_Control(2, dirb, 200, 254, B, 1, 1);
     Emm_V5_Multi_Motor_Cmd(0);
 
     /* 使用 motor_serial 的状态管理：标记电机正在运行 */
@@ -33,5 +40,7 @@ void go(float X, float Y)//运动到指定位置
 
 void motion_execute(MotionCmd *cmd)
 {
-    go((float)cmd->x,(float)cmd->y);
+    float x = cmd->x * SCALE_FACTOR;
+    float y = cmd->y * SCALE_FACTOR;
+    go(x, y);
 }

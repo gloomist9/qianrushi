@@ -55,6 +55,9 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3|GPIO_PIN_9, GPIO_PIN_RESET);
 
+  /* TIM1 PWM 引脚提前拉低，防止上电时舵机抽动 */
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9|GPIO_PIN_14, GPIO_PIN_RESET);
+
   /*Configure GPIO pins : PB12 PB14 */
   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_14;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -73,6 +76,14 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* PE9(舵机)/PE14: 先配置为 GPIO 输出低电平，
+     等 TIM1 初始化时切为 AF 就不会有电平跳变 */
+  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_14;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
 }
 
