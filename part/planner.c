@@ -12,6 +12,7 @@
 extern volatile uint16_t pulse_remaining;
 
 static uint32_t last_poll = 0;//上次轮询时间
+static uint8_t poll_motor = 0;
 
 /* 当前是否正在运动 */
 static bool planner_busy = false;
@@ -70,10 +71,19 @@ void motor_poll(void)//轮询电机状态 + 看门狗
 
     last_poll = HAL_GetTick();
 
-    /* 使用 MMCL 批量查询两个电机，和 go() 保持一致的通信协议 */
-    Emm_V5_MMCL_Read_Sys_Params(1, S_FLAG);
-    Emm_V5_MMCL_Read_Sys_Params(2, S_FLAG);
-    Emm_V5_Multi_Motor_Cmd(0);
+    /* 交替查询：两个电机共用 RS-485 总线，同时查询会导致冲突 */
+    if(poll_motor == 0)
+    {
+        Emm_V5_MMCL_Read_Sys_Params(1, S_FLAG);
+        Emm_V5_Multi_Motor_Cmd(0);
+        poll_motor = 1;
+    }
+    else 
+    {
+        Emm_V5_MMCL_Read_Sys_Params(2, S_FLAG);
+        Emm_V5_Multi_Motor_Cmd(0);
+        poll_motor = 0;
+    }
 
     /* 检测电机是否超时无响应 */
     motor_watchdog();

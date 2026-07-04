@@ -3,28 +3,28 @@
 #include "stdio.h"
 
 /* =========================
-   ��������
+   基础定义
    ========================= */
 
 #define MOTOR_RX_BUF_SIZE 128
 #define MOTOR_FRAME_MAX   128
 
 /* =========================
-   ���ջ���
+   接收缓冲
    ========================= */
 
 uint8_t motor_dma_buf[MOTOR_RX_BUF_SIZE];
 uint8_t motor_frame_buf[MOTOR_FRAME_MAX];
 
 /* =========================
-   �������
+   电机对象
    ========================= */
 
 MotorInfo motor1 = {0};
 MotorInfo motor2 = {0};
 
 /* =========================
-   ��ȡ���
+   获取电机
    ========================= */
 
 MotorInfo* get_motor_by_id(uint8_t id)
@@ -35,7 +35,7 @@ MotorInfo* get_motor_by_id(uint8_t id)
 }
 
 /* =========================
-   ��ʼ��USART1 DMA + IDLE
+   初始化USART1 DMA + IDLE
    ========================= */
 
 void motor_serial_init(void)
@@ -51,12 +51,12 @@ void motor_serial_init(void)
 }
 
 /* =========================
-   USART1�ж����
+   USART1中断入口
    ========================= */
 
 void USART1_IRQHandler(void)
 {
-    /* IDLE�ж� */
+    /* IDLE中断 */
     if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE))
     {
         __HAL_UART_CLEAR_IDLEFLAG(&huart1);
@@ -78,7 +78,7 @@ void USART1_IRQHandler(void)
 }
 
 /* =========================
-   ֡�������
+   帧解析入口
    ========================= */
 
 void motor_frame_parse(uint8_t *buf, uint16_t len)
@@ -89,15 +89,11 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
     {
         uint8_t *frame = &buf[i];
 
-        /* ===== �̶�֡�ṹ��� ===== */
+        /* ===== 固定帧结构检查 ===== */
         uint8_t id     = frame[0];
         uint8_t func   = frame[1];
-        uint16_t dlc   = (uint16_t)frame[2];
-        if(dlc != 0x02)
-        {
-            dlc = ((uint16_t)frame[2] << 8) | frame[3];
-        }
-        uint8_t status = frame[4];
+        uint8_t dlc    = frame[2];
+        uint8_t status  = frame[4];
 
         if(func != 0x03) continue;
         if(dlc != 0x02) continue;
@@ -105,7 +101,7 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
         MotorInfo *m = get_motor_by_id(id);
         if(m == NULL) continue;
 
-        /* ===== ״̬���������ģ�===== */
+        /* ===== 状态解析（核心）===== */
         switch(status)
         {
             case 0x00:
@@ -129,13 +125,13 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
         m->last_tick = HAL_GetTick();
         m->expect_reply = 0;
 
-        /* �ҵ�һ֡�͹� */
+        /* 找到一帧就够 */
         break;
     }
 }
 
 /* =========================
-   busy�жϣ�planner�ã�
+   busy判断（planner用）
    ========================= */
 
 uint8_t motion_is_busy(void)
@@ -147,7 +143,7 @@ uint8_t motion_is_busy(void)
 }
 
 /* =========================
-   ��ʱ���
+   超时监控
    ========================= */
 
 #define MOTOR_TIMEOUT_MS 200
