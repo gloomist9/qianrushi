@@ -43,6 +43,8 @@ void serial_rx_callback(uint8_t *buf, uint16_t size)
                 line_ready = true;
                 line_index = 0;
             }
+            // newline received, stop loop
+            break;
         }
         else
         {
@@ -58,10 +60,6 @@ void serial_rx_callback(uint8_t *buf, uint16_t size)
         }
     }
 
-    HAL_UARTEx_ReceiveToIdle_DMA(
-        &huart3,
-        uart_rx_buf,
-        sizeof(uart_rx_buf));
 }
 
 /*==================== 主循环处理 ====================*/

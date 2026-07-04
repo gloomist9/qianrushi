@@ -65,7 +65,7 @@ extern uint8_t uart_rx_buf[64];
 #define MOTOR_RX_BUF_SIZE 128
 extern uint8_t usart1_rx_buf[MOTOR_RX_BUF_SIZE];
 extern uint8_t usart1_frame_buf[MOTOR_RX_BUF_SIZE];
-
+ uint32_t counter = 0;
 
 int16_t x=0,y=0;
 //lo,ld,ro,rd
@@ -73,6 +73,10 @@ uint16_t lo[]={0,0};
 uint16_t ld[]={0,0};
 uint16_t ro[]={0,0};
 uint16_t rd[]={0,0};
+
+/* 软件脉冲计数，替代 RCR（RCR 硬件只有 8 位，最大 255）
+   normaldj.c 的 motor_pulse_start() 写入，回调里递减 */
+volatile uint16_t pulse_remaining = 0;
 
 
 /* USER CODE END PV */
@@ -146,13 +150,19 @@ int main(void)
   queue_init();
   motor_serial_init();
  // parser_init();
+
+  /* 中断优先级只需设一次 */
+  HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+
   while (1)
   {
     serial_process();
 
     planner_process();
 
-    motor_poll();
+    //motor_poll();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -206,6 +216,24 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+/**
+ * @brief  TIM1 更新中断回调（RCR=0，每个 PWM 周期触发一次）
+ *         由软件 pulse_remaining 计数，减到 0 时自动停止
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM1)
+    {
+        if (--pulse_remaining == 0)
+        {
+            HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+            __HAL_TIM_MOE_DISABLE(&htim1);
+            __HAL_TIM_DISABLE_IT(&htim1, TIM_IT_UPDATE);
+        }
+    }
+}
+
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 { 
   if(huart != &huart3)

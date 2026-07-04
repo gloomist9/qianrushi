@@ -12,7 +12,7 @@
 extern MotorInfo motor1;
 extern MotorInfo motor2;
 
-static void go(float X, float Y)//运动到指定位置
+void go(float X, float Y)//运动到指定位置
 {
     int32_t A = (int32_t)((X+Y)*STEPS_PER_MM);
     int32_t B = (int32_t)((X-Y)*STEPS_PER_MM);
@@ -20,8 +20,8 @@ static void go(float X, float Y)//运动到指定位置
     uint8_t dirb = 0;
     if(A<0) {A=-A; dira=1;}
     if(B<0) {B=-B; dirb=1;}
-    Emm_V5_MMCL_Pos_Control(1, dira, 400, 254, A, 1, 1);
-    Emm_V5_MMCL_Pos_Control(2, dirb, 400, 254, B, 1, 1);
+    Emm_V5_MMCL_Pos_Control(1, dira, 50, 254, A, 1, 1);
+    Emm_V5_MMCL_Pos_Control(2, dirb, 50, 254, B, 1, 1);
     Emm_V5_Multi_Motor_Cmd(0);
 
     /* 使用 motor_serial 的状态管理：标记电机正在运行 */

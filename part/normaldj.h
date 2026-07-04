@@ -1,8 +1,9 @@
 #ifndef __NORMAL_H
 #define __NORMAL_H
-#include "main.h"
-void platformstop(void);
-void platformmove(void);
-void penmove(void);
+
+void penrise(void);
+void pendown(void);
 void penstop(void);
+void motor_pulse_start(uint16_t pulse_count);
+
 #endif

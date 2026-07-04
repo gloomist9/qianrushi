@@ -3,9 +3,13 @@
 #include "command_queue.h"
 #include "motioncmd.h"
 #include "motion.h"
+#include "normaldj.h"
 #include "Emm_V5.h"
 #include "motor_serial.h"
 #include <stdbool.h>
+
+/* main.c 定义的脉冲计数器，用于等待舵机到位 */
+extern volatile uint16_t pulse_remaining;
 
 static uint32_t last_poll = 0;//上次轮询时间
 static uint8_t poll_motor = 0;
@@ -34,6 +38,15 @@ void planner_process(void)
     /* 没有新的运动指令 */
     if(!queue_pop(&cmd))
         return;
+
+    /* G0 抬笔（快速移动），G1 落笔（画线） */
+    if (cmd.type == MOTION_G0)
+        penrise();
+    else if (cmd.type == MOTION_G1)
+        pendown();
+
+    /* 等待舵机到位（255 个 PWM 脉冲 ≈ 51ms） */
+    while (pulse_remaining > 0);
 
     /* 执行运动指令 */
     motion_execute(&cmd);

@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "usart.h"
+#include "tim.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -237,7 +238,6 @@ void DMA1_Stream3_IRQHandler(void)
   * @brief This function handles USART1 global interrupt.
   */
 
-
 /**
   * @brief This function handles USART3 global interrupt.
   */
@@ -295,5 +295,14 @@ void DMA2_Stream7_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+/**
+  * @brief This function handles TIM1 update interrupt.
+  *        RCR 倒数为 0 时触发，表示指定脉冲数已发完。
+  */
+void TIM1_UP_TIM10_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&htim1);
+}
 
 /* USER CODE END 1 */
