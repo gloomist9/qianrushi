@@ -65,6 +65,10 @@ void USART1_IRQHandler(void)
 
         uint16_t len = MOTOR_RX_BUF_SIZE - __HAL_DMA_GET_COUNTER(huart1.hdmarx);
 
+        extern volatile uint32_t dbg_usart1_idle, dbg_usart1_len;
+        dbg_usart1_idle++;
+        dbg_usart1_len = len;
+
         if(len > 0 && len < MOTOR_FRAME_MAX)
         {
             memcpy(motor_frame_buf, motor_dma_buf, len);
@@ -83,37 +87,71 @@ void USART1_IRQHandler(void)
 
 void motor_frame_parse(uint8_t *buf, uint16_t len)
 {
-    if(len < 7) return;
+    /*
+     * 电机回复格式（Read_Sys_Params 查询 S_FLAG）：
+     *   短帧 4 字节: {id, 0x03, status, 0x6B}
+     *   长帧 7+ 字节: {id, 0x03, dlc[2], data..., 0x6B}
+     * 最短帧 4 字节即可解析
+     */
+    if(len < 4) return;
 
-    for(int i = 0; i <= len - 7; i++)
+    for(int i = 0; i <= len - 4; i++)
     {
         uint8_t *frame = &buf[i];
+        uint8_t id   = frame[0];
+        uint8_t func = frame[1];
 
-        /* ===== 固定帧结构检查 ===== */
-        uint8_t id     = frame[0];
-        uint8_t func   = frame[1];
-        uint8_t dlc    = frame[2];
-        uint8_t status  = frame[4];
+        /* 电机回复功能码和查询一致（S_FLAG=0x3A），不固定为 0x03 */
+        if(func < 0x20) continue;
 
-        if(func != 0x03) continue;
-        if(dlc != 0x02) continue;
+        uint8_t status;
+        uint8_t remain = (uint8_t)(len - i);
+
+        if(remain >= 7)
+        {
+            /* 尝试长帧格式（带 DLC） */
+            uint16_t dlc = (uint16_t)frame[2];
+            if(dlc != 0x02)
+                dlc = ((uint16_t)frame[2] << 8) | frame[3];
+            if(dlc == 0x02)
+                status = frame[4];
+            else
+            {
+                /* DLC 不匹配，当短帧处理 */
+                status = frame[2];
+            }
+        }
+        else
+        {
+            /* 短帧: {id, 0x03, status, 0x6B}，frame[2] 就是状态 */
+            status = frame[2];
+        }
+
+        extern volatile uint32_t dbg_frame_parse, dbg_idle_found, dbg_run_found;
+        extern volatile uint32_t dbg_motor1_state, dbg_motor2_state;
+        dbg_frame_parse++;
 
         MotorInfo *m = get_motor_by_id(id);
         if(m == NULL) continue;
 
-        /* ===== 状态解析（核心）===== */
+        /* ===== 状态解析（核心）=====
+         * S_FLAG 回复的 status 字节含义：
+         *   0x00 = 待机/空闲
+         *   0x01 = 正在运动
+         *   0x02 = 位置到达（运动完成，即 IDLE）
+         *   其他 = 错误状态
+         */
         switch(status)
         {
             case 0x00:
+            case 0x02:   /* 位置到达 = IDLE */
                 m->state = MOTOR_IDLE;
+                dbg_idle_found++;
                 break;
 
             case 0x01:
                 m->state = MOTOR_RUNNING;
-                break;
-
-            case 0x02:
-                m->state = MOTOR_ERROR;
+                dbg_run_found++;
                 break;
 
             default:
@@ -124,6 +162,14 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
         m->online = 1;
         m->last_tick = HAL_GetTick();
         m->expect_reply = 0;
+
+        /* 更新全局状态快照 */
+        {
+            extern MotorInfo motor1, motor2;
+            extern volatile uint32_t dbg_motor1_state, dbg_motor2_state;
+            dbg_motor1_state = motor1.state;
+            dbg_motor2_state = motor2.state;
+        }
 
         /* 找到一帧就够 */
         break;

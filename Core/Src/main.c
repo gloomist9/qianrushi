@@ -62,6 +62,27 @@ extern uint8_t RxByte;
 extern volatile uint8_t overflag;
 extern uint8_t uart_rx_buf[64];
 
+uint8_t test=0;
+
+/*==================== 调试计数器 ====================*/
+volatile uint32_t dbg_serial_rx     = 0;
+volatile uint32_t dbg_parse_ok      = 0;
+volatile uint32_t dbg_parse_fail    = 0;
+volatile uint32_t dbg_queue_push    = 0;
+volatile uint32_t dbg_queue_full    = 0;
+volatile uint32_t dbg_planner_pop   = 0;
+volatile uint32_t dbg_planner_busy  = 0;
+volatile uint32_t dbg_motor_poll    = 0;
+volatile uint32_t dbg_go_called     = 0;
+volatile uint32_t dbg_frame_parse   = 0;
+volatile uint32_t dbg_frame_skip    = 0;
+volatile uint32_t dbg_idle_found    = 0;
+volatile uint32_t dbg_run_found     = 0;
+volatile uint32_t dbg_usart1_idle   = 0;
+volatile uint32_t dbg_usart1_len    = 0;
+volatile uint32_t dbg_motor1_state  = 0;
+volatile uint32_t dbg_motor2_state  = 0;
+
 #define MOTOR_RX_BUF_SIZE 128
 extern uint8_t usart1_rx_buf[MOTOR_RX_BUF_SIZE];
 extern uint8_t usart1_frame_buf[MOTOR_RX_BUF_SIZE];
