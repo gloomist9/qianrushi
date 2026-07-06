@@ -123,13 +123,9 @@ bool queue_push(const MotionCmd *cmd)
 
     if(queue_is_full())
     {
-        extern volatile uint32_t dbg_queue_full;
-        dbg_queue_full++;
         return false;
     }
 
-    extern volatile uint32_t dbg_queue_push;
-    dbg_queue_push++;
 
     /*------------------------
       д������

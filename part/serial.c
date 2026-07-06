@@ -29,8 +29,6 @@ void serial_rx_callback(uint8_t *buf, uint16_t size)
                 line_buf[line_index] = '\0';
                 line_ready = true;
                 line_index = 0;
-                extern volatile uint32_t dbg_serial_rx;
-                dbg_serial_rx++;
             }
             break;
         }
@@ -68,9 +66,6 @@ void serial_process(void)
     line_ready = false;
 
     {
-        extern volatile uint32_t dbg_parse_ok, dbg_parse_fail;
-        if(result == PARSER_OK) dbg_parse_ok++;
-        else dbg_parse_fail++;
     }
 
     protocol_handle_parser_result(result);

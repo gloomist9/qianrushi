@@ -44,13 +44,13 @@ void motor_pulse_start(uint16_t pulse_count)
 void penrise(void)
 {
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
-    motor_pulse_start(300);
+    motor_pulse_start(70);
 }
 
 void pendown(void)
 {
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
-    motor_pulse_start(300);
+    motor_pulse_start(70);
 }
 
 void penstop(void)

@@ -65,9 +65,6 @@ void USART1_IRQHandler(void)
 
         uint16_t len = MOTOR_RX_BUF_SIZE - __HAL_DMA_GET_COUNTER(huart1.hdmarx);
 
-        extern volatile uint32_t dbg_usart1_idle, dbg_usart1_len;
-        dbg_usart1_idle++;
-        dbg_usart1_len = len;
 
         if(len > 0 && len < MOTOR_FRAME_MAX)
         {
@@ -127,9 +124,6 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
             status = frame[2];
         }
 
-        extern volatile uint32_t dbg_frame_parse, dbg_idle_found, dbg_run_found;
-        extern volatile uint32_t dbg_motor1_state, dbg_motor2_state;
-        dbg_frame_parse++;
 
         MotorInfo *m = get_motor_by_id(id);
         if(m == NULL) continue;
@@ -146,12 +140,10 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
             case 0x00:
             case 0x02:   /* 位置到达 = IDLE */
                 m->state = MOTOR_IDLE;
-                dbg_idle_found++;
                 break;
 
             case 0x01:
                 m->state = MOTOR_RUNNING;
-                dbg_run_found++;
                 break;
 
             default:
@@ -163,13 +155,6 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
         m->last_tick = HAL_GetTick();
         m->expect_reply = 0;
 
-        /* 更新全局状态快照 */
-        {
-            extern MotorInfo motor1, motor2;
-            extern volatile uint32_t dbg_motor1_state, dbg_motor2_state;
-            dbg_motor1_state = motor1.state;
-            dbg_motor2_state = motor2.state;
-        }
 
         /* 找到一帧就够 */
         break;
