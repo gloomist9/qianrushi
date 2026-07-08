@@ -1,53 +1,18 @@
-/**
- ******************************************************************************
- * @file    command_queue.c
- * @author  Mini Motion Controller Project
- * @brief   �˶�����ζ���ʵ��
- ******************************************************************************
- */
-
 #include "command_queue.h"
 
-/*============================ ˽�б��� ============================*/
-
-/**
- * @brief ���ζ��л�����
- *
- * queue_buffer[] ���ڴ�ŵȴ�ִ�е��˶����
- *
- * Parser:
- *      queue_push()
- *
- * Planner:
- *      queue_pop()
- */
+//环形队列缓冲区
 static MotionCmd queue_buffer[COMMAND_QUEUE_SIZE];
 
-/**
- * @brief ��������������λ�ã�
- *
- * ָ����һ�������� Planner ȡ�ߵ����
- */
+//tail: Planner取走的位置
 static uint16_t tail = 0;
 
-/**
- * @brief ��β���������λ�ã�
- *
- * ָ����һ��׼��д���λ�á�
- */
+//head: 下一个写入位置
 static uint16_t head = 0;
 
-/**
- * @brief ��ǰ��������������
- */
+//当前队列里的指令数
 static uint16_t count = 0;
 
 
-/*============================ �ӿ�ʵ�� ============================*/
-
-/**
- * @brief ��ʼ������
- */
 void queue_init(void)
 {
     head = 0;
@@ -56,9 +21,6 @@ void queue_init(void)
 }
 
 
-/**
- * @brief ��ն���
- */
 void queue_clear(void)
 {
     head = 0;
@@ -67,149 +29,61 @@ void queue_clear(void)
 }
 
 
-/**
- * @brief �ж϶����Ƿ�Ϊ��
- */
 bool queue_is_empty(void)
 {
     return (count == 0);
 }
 
 
-/**
- * @brief �ж϶����Ƿ�����
- */
 bool queue_is_full(void)
 {
     return (count >= COMMAND_QUEUE_SIZE);
 }
 
 
-/**
- * @brief ��ȡ��ǰ���г���
- */
 uint16_t queue_size(void)
 {
     return count;
 }
 
 
-/**
- * @brief ���
- *
- * @param cmd
- *      ��������е��˶�����
- *
- * @retval true
- *      ��ӳɹ�
- *
- * @retval false
- *      ��������
- */
 bool queue_push(const MotionCmd *cmd)
 {
-    /*------------------------
-      �������
-    ------------------------*/
-
     if(cmd == NULL)
-    {
         return false;
-    }
-
-    /*------------------------
-      �ж϶����Ƿ�����
-    ------------------------*/
 
     if(queue_is_full())
-    {
         return false;
-    }
 
-
-    /*------------------------
-      д������
-    ------------------------*/
-
+    //写入
     queue_buffer[head] = *cmd;
 
-    /*------------------------
-      head����ƶ�һ��
-      ����ĩβ���Զ��ص�0
-    ------------------------*/
-
+    //head前移，到末尾回0
     head++;
-
     if(head >= COMMAND_QUEUE_SIZE)
-    {
         head = 0;
-    }
-
-    /*------------------------
-      ��ǰ��������+1
-    ------------------------*/
 
     count++;
-
     return true;
 }
 
 
-/**
- * @brief ����
- *
- * @param cmd
- *      ���һ���˶�����
- *
- * @retval true
- *      ���ӳɹ�
- *
- * @retval false
- *      ����Ϊ��
- */
 bool queue_pop(MotionCmd *cmd)
 {
-    /*------------------------
-      �������
-    ------------------------*/
-
     if(cmd == NULL)
-    {
         return false;
-    }
-
-    /*------------------------
-      �ж϶����Ƿ�Ϊ��
-    ------------------------*/
 
     if(queue_is_empty())
-    {
         return false;
-    }
 
-    /*------------------------
-      ȡ��һ������
-    ------------------------*/
-
+    //取出
     *cmd = queue_buffer[tail];
 
-    /*------------------------
-      tail����ƶ�
-    ------------------------*/
-
+    //tail前移，到末尾回0
     tail++;
-
     if(tail >= COMMAND_QUEUE_SIZE)
-    {
         tail = 0;
-    }
-
-    /*------------------------
-      ��ǰ��������-1
-    ------------------------*/
 
     count--;
-
     return true;
 }
-

@@ -1,65 +1,20 @@
-/**
- ******************************************************************************
- * @file    motioncmd.h
- * @author  apex-CoreXY Project
- * @brief   运动命令数据结构定义
- *
- * @details
- * MotionCmd 是整个运动控制系统的核心数据定义。
- *
- * 数据流向
- *
- *      Parser
- *         ↓
- *         ↓
- *     MotionCmd
- *         ↓
- *         ↓
- *   Command Queue
- *         ↓
- *         ↓
- *      Planner
- *         ↓
- *         ↓
- *   Motor Driver
- *
- * 本文件只定义运动命令的数据结构，不涉及任何运动控制算法。
- ******************************************************************************
- */
+//运动命令数据结构
+//Parser→MotionCmd→Queue→Planner→Motor
 #ifndef MOTIONCMD_H
 #define MOTIONCMD_H
-//运动命令
 #include "main.h"
 
-/**
- * @brief 运动类型
- *
- * 目前仅支持：
- * G0：快速移动
- * G1：直线运动
- *
- * 后续可扩展：
- * G2、G3：圆弧插补
- */
 typedef enum
 {
-    MOTION_G0=0,
-    MOTION_G1
+    MOTION_G0=0,  //快速移动
+    MOTION_G1     //直线运动
 } MotionType;
 
-/**
- * @brief 一条运动命令
- *
- * @note
- * Queue 列表中会自动填充坐标。
- */
 typedef struct
 {
-    MotionType type;     /**< G0 或 G1 */
-
-    float x;             /**< 目标 X 坐标（mm） */
-
-    float y;             /**< 目标 Y 坐标（mm） */
-
+    MotionType type;
+    float x;        //目标X坐标(mm)
+    float y;        //目标Y坐标(mm)
+    float speed;    //进给速度(mm/min)，0表示用默认值
 } MotionCmd;
 #endif

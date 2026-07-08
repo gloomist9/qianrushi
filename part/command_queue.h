@@ -1,133 +1,22 @@
-/**
- ******************************************************************************
- * @file    command_queue.h
- * @author  apex-CoreXY Project
- * @brief   �˶�����ζ���
- *
- * @details
- * ��ģ�鸺����� MotionCmd ���С�
- *
- * ��������
- *
- *      Parser
- *         ��
- *         ��
- *     queue_push()
- *         ��
- *         ��
- *   Command Queue
- *         ��
- *         ��
- *     queue_pop()
- *         ��
- *         ��
- *      Planner
- *
- * ��ģ���������й�����
- *
- ******************************************************************************
- */
+//运动指令环形队列
+//Parser→queue_push→队列→queue_pop→Planner
 #ifndef COMMAND_QUEUE_H
 #define COMMAND_QUEUE_H
-//����ȴ�ִ�е��˶�����
 
 #include "main.h"
-
 #include <stdbool.h>
 #include <stdint.h>
-
 #include "motioncmd.h"
 
-
-/*============================ �궨�� ============================*/
-
-/**
- * @brief ������г���
- *
- * ��ǰ�汾��
- * 32���˶�����
- *
- * ���������Ҫ����Ļ��棬
- * ֻ���޸Ĵ˺꼴�ɡ�
- */
+//队列最大长度，需要更大的缓存改这里
 #define COMMAND_QUEUE_SIZE    8
 
-
-/*============================ ����ӿ� ============================*/
-
-
-/**
- * @brief ��ʼ���������
- *
- * @note
- * ϵͳ�ϵ�����һ�μ��ɡ�
- */
 void queue_init(void);
-
-/**
- * @brief ����������
- *
- * @note
- * �ѻ��浫��δִ�е����ȫ��������
- */
 void queue_clear(void);
-
-/**
- * @brief �������
- *
- * @param cmd
- *      ָ�������˶�����
- *
- * @retval true
- *      ��ӳɹ�
- *
- * @retval false
- *      ��������
- */
 bool queue_push(const MotionCmd *cmd);
-
-/**
- * @brief �������
- *
- * @param cmd
- *      ���һ���˶�����
- *
- * @retval true
- *      ���ӳɹ�
- *
- * @retval false
- *      ����Ϊ��
- */
 bool queue_pop(MotionCmd *cmd);
-
-/**
- * @brief �ж϶����Ƿ�Ϊ��
- *
- * @retval true
- *      ����Ϊ��
- *
- * @retval false
- *      ���зǿ�
- */
 bool queue_is_empty(void);
-
-/**
- * @brief �ж϶����Ƿ�����
- *
- * @retval true
- *      ��������
- *
- * @retval false
- *      ����δ��
- */
 bool queue_is_full(void);
-
-/**
- * @brief ��ȡ��ǰ�����е���������
- *
- * @return
- * ��ǰ�������������
- */
 uint16_t queue_size(void);
 
 #endif

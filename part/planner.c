@@ -8,14 +8,12 @@
 #include "motor_serial.h"
 #include <stdbool.h>
 
-/* main.c 定义的脉冲计数器，用于等待舵机到位 */
-extern volatile uint16_t pulse_remaining;
+extern volatile uint16_t pulse_remaining;//舵机脉冲计数，main.c定义
 
-static uint32_t last_poll = 0;//上次轮询时间
+static uint32_t last_poll = 0;
 static uint8_t poll_motor = 0;
 
-/* 当前是否正在运动 */
-static bool planner_busy = false;
+static bool planner_busy = false;//当前是否正在运动
 
 void planner_init(void)
 {
@@ -26,43 +24,52 @@ void planner_process(void)
 {
     MotionCmd cmd;
 
-    /* 等待运动完成 */
+    //等上一段走完
     if(planner_busy)
     {
         if(motion_is_busy())
-        {
             return;
-        }
 
         planner_busy = false;
     }
 
-    /* 没有新的运动指令 */
+    //取一条指令
     if(!queue_pop(&cmd))
         return;
 
+    //笔控制由M3/M5在parse阶段处理
 
-    /* 笔控制由 M3/M5 在 parse 阶段直接处理 */
-
-    /* 等待舵机到位 */
+    //等舵机到位
     while (pulse_remaining > 0);
 
-    /* 执行运动指令 */
+    //执行
     motion_execute(&cmd);
 
     planner_busy = true;
 }
 
-void motor_poll(void)//轮询电机状态 + 看门狗
+//等所有运动走完（阻塞）
+void planner_wait_idle(void)
 {
-    if(HAL_GetTick() - last_poll < 10)
+    while (1)
+    {
+        planner_process();
+        motor_poll();
+
+        if (queue_is_empty() && !motion_is_busy())
+            break;
+    }
+}
+
+//轮询电机状态+看门狗
+void motor_poll(void)
+{
+    if(HAL_GetTick() - last_poll < 2)
         return;
 
     last_poll = HAL_GetTick();
 
-
-    /* 交替查询：两个电机共用 RS-485 总线，同时查询会导致冲突
-     * 注意：必须用直接发送版本，MMCL 批量模式下 Read 子命令电机不回复 */
+    //两个电机共用RS-485，交替查询
     if(poll_motor == 0)
     {
         Emm_V5_Read_Sys_Params(1, S_FLAG);
@@ -74,6 +81,5 @@ void motor_poll(void)//轮询电机状态 + 看门狗
         poll_motor = 0;
     }
 
-    /* 检测电机是否超时无响应 */
     motor_watchdog();
 }

@@ -1,3 +1,5 @@
+//笔控制+舵机驱动
+//GPIO PB3方向+PWM脉冲控制抬笔落笔
 #ifndef __NORMAL_H
 #define __NORMAL_H
 

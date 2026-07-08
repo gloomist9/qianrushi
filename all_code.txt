@@ -1,0 +1,2773 @@
+========================================
+  APEX-CoreXY 绘图机 完整源代码
+  生成时间: Thu Jul  9 02:15:08     2026
+========================================
+
+
+############################################################
+#  文件: part/Emm_V5.h
+############################################################
+
+#ifndef __EMM_V5_H
+#define __EMM_V5_H
+
+#include "usart.h"
+
+/**********************************************************
+***	Emm_V5.0步进闭环控制例程
+***	编写作者：ZHANGDATOU
+***	技术支持：张大头闭环伺服
+***	淘宝店铺：https://zhangdatou.taobao.com
+***	CSDN博客：http s://blog.csdn.net/zhangdatou666
+***	qq交流群：262438510
+**********************************************************/
+
+#define					ABS(x)							((x) > 0 ? (x) : -(x)) 
+
+typedef enum {
+	S_VBUS  = 5,	// 读取总线电压
+	S_CBUS  = 6,	// 读取总线电流
+	S_CPHA  = 7,	// 读取相电流
+	S_ENCO  = 8,	// 读取编码器原始值
+	S_CLKC  = 9,	// 读取实时脉冲数
+	S_ENCL  = 10,	// 读取经过线性化校准后的编码器值
+	S_CLKI  = 11,	// 读取输入脉冲数
+	S_TPOS  = 12,	// 读取电机目标位置
+	S_SPOS  = 13,	// 读取电机实时设定的目标位置
+	S_VEL   = 14,	// 读取电机实时转速
+	S_CPOS  = 15,	// 读取电机实时位置
+	S_PERR  = 16,	// 读取电机位置误差
+	S_VBAT  = 17,	// 读取多圈编码器电池电压（Y42）
+	S_TEMP  = 18,	// 读取电机实时温度（Y42）
+	S_FLAG  = 19,	// 读取电机状态标志位
+	S_OFLAG = 20, // 读取回零状态标志位
+	S_OAF   = 21,	// 读取电机状态标志位 + 回零状态标志位（Y42）
+	S_PIN   = 22,	// 读取引脚状态（Y42）
+}SysParams_t;
+
+#define		MMCL_LEN		512
+extern __IO uint16_t MMCL_count, MMCL_cmd[MMCL_LEN];
+
+/**
+***********************************************************
+***********************************************************
+*** 
+***
+*** @brief	后缀带有（Y42）为Y42新增命令，X42不能用，其他通用
+***
+*** 
+***********************************************************
+***********************************************************
+***/
+/**********************************************************
+*** 触发动作命令
+**********************************************************/
+// 触发编码器校准
+void Emm_V5_Trig_Encoder_Cal(uint8_t addr);
+// 重启电机（Y42）
+void Emm_V5_Reset_Motor(uint8_t addr);
+// 将当前位置清零
+void Emm_V5_Reset_CurPos_To_Zero(uint8_t addr);
+// 解除堵转保护
+void Emm_V5_Reset_Clog_Pro(uint8_t addr);
+// 恢复出厂设置
+void Emm_V5_Restore_Motor(uint8_t addr);
+/**********************************************************
+*** 运动控制命令
+**********************************************************/
+// 多电机命令（Y42）
+void Emm_V5_Multi_Motor_Cmd(uint8_t addr);
+// 电机使能控制
+void Emm_V5_En_Control(uint8_t addr, bool state, bool snF);
+// 速度模式控制
+void Emm_V5_Vel_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, bool snF);
+// 位置模式控制
+void Emm_V5_Pos_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, uint32_t clk, bool raF, bool snF);
+// 让电机立即停止运动
+void Emm_V5_Stop_Now(uint8_t addr, bool snF);
+// 触发多机同步开始运动
+void Emm_V5_Synchronous_motion(uint8_t addr);
+/**********************************************************
+*** 原点回零命令
+**********************************************************/
+// 设置单圈回零的零点位置
+void Emm_V5_Origin_Set_O(uint8_t addr, bool svF);
+// 触发回零
+void Emm_V5_Origin_Trigger_Return(uint8_t addr, uint8_t o_mode, bool snF);
+// 强制中断并退出回零
+void Emm_V5_Origin_Interrupt(uint8_t addr);
+// 读取回零参数
+void Emm_V5_Origin_Read_Params(uint8_t addr);
+// 修改回零参数
+void Emm_V5_Origin_Modify_Params(uint8_t addr, bool svF, uint8_t o_mode, uint8_t o_dir, uint16_t o_vel, uint32_t o_tm, uint16_t sl_vel, uint16_t sl_ma, uint16_t sl_ms, bool potF);
+/**********************************************************
+*** 读取系统参数命令
+**********************************************************/
+// 定时返回信息命令（Y42）
+void Emm_V5_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t time_ms);
+// 读取系统参数
+void Emm_V5_Read_Sys_Params(uint8_t addr, SysParams_t s);
+/**********************************************************
+*** 读写驱动参数命令
+**********************************************************/
+// 修改电机ID地址
+void Emm_V5_Modify_Motor_ID(uint8_t addr, bool svF, uint8_t id);
+// 修改细分值
+void Emm_V5_Modify_MicroStep(uint8_t addr, bool svF, uint8_t mstep);
+// 修改掉电标志
+void Emm_V5_Modify_PDFlag(uint8_t addr, bool pdf);
+// 读取选项参数状态（Y42）
+void Emm_V5_Read_Opt_Param_Sta(uint8_t addr);
+// 修改电机类型（Y42）
+void Emm_V5_Modify_Motor_Type(uint8_t addr, bool svF, bool mottype);
+// 修改固件类型（Y42）
+void Emm_V5_Modify_Firmware_Type(uint8_t addr, bool svF, bool fwtype);
+// 修改开环/闭环控制模式（Y42）
+void Emm_V5_Modify_Ctrl_Mode(uint8_t addr, bool svF, bool ctrl_mode);
+// 修改电机运动正方向（Y42）
+void Emm_V5_Modify_Motor_Dir(uint8_t addr, bool svF, bool dir);
+// 修改锁定按键功能（Y42）
+void Emm_V5_Modify_Lock_Btn(uint8_t addr, bool svF, bool lockbtn);
+// 修改命令速度值是否缩小10倍输入（Y42）
+void Emm_V5_Modify_S_Vel(uint8_t addr, bool svF, bool s_vel);
+// 修改开环模式工作电流
+void Emm_V5_Modify_OM_ma(uint8_t addr, bool svF, uint16_t om_ma);
+// 修改闭环模式最大电流
+void Emm_V5_Modify_FOC_mA(uint8_t addr, bool svF, uint16_t foc_mA);
+// 读取PID参数
+void Emm_V5_Read_PID_Params(uint8_t addr);
+// 修改PID参数
+void Emm_V5_Modify_PID_Params(uint8_t addr, bool svF, uint32_t kp, uint32_t ki, uint32_t kd);
+// 读取DMX512协议参数（Y42）
+void Emm_V5_Read_DMX512_Params(uint8_t addr);
+// 修改DMX512协议参数（Y42）
+void Emm_V5_Modify_DMX512_Params(uint8_t addr, bool svF, uint16_t tch, uint8_t nch, uint8_t mode, uint16_t vel, uint16_t acc, uint16_t vel_step, uint32_t pos_step);
+// 读取位置到达窗口（Y42）
+void Emm_V5_Read_Pos_Window(uint8_t addr);
+// 修改位置到达窗口（Y42）
+void Emm_V5_Modify_Pos_Window(uint8_t addr, bool svF, uint16_t prw);
+// 读取过热过流保护检测阈值（Y42）
+void Emm_V5_Read_Otocp(uint8_t addr);
+// 修改过热过流保护检测阈值（Y42）
+void Emm_V5_Modify_Otocp(uint8_t addr, bool svF, uint16_t otp, uint16_t ocp, uint16_t time_ms);
+// 读取心跳保护功能时间（Y42）
+void Emm_V5_Read_Heart_Protect(uint8_t addr);
+// 修改心跳保护功能时间（Y42）
+void Emm_V5_Modify_Heart_Protect(uint8_t addr, bool svF, uint32_t hp);
+// 读取积分限幅/刚性系数（Y42）
+void Emm_V5_Read_Integral_Limit(uint8_t addr);
+// 修改积分限幅/刚性系数（Y42）
+void Emm_V5_Modify_Integral_Limit(uint8_t addr, bool svF, uint32_t il);
+/**********************************************************
+*** 读取所有驱动参数命令
+**********************************************************/
+// 读取系统状态参数
+void Emm_V5_Read_System_State_Params(uint8_t addr);
+// 读取驱动配置参数
+void Emm_V5_Read_Motor_Conf_Params(uint8_t addr);
+
+/**
+***********************************************************
+***********************************************************
+*** 
+***
+*** @brief	以下是把相应命令加载到Y42多电机命令上的函数（Y42）
+***
+*** 
+***********************************************************
+***********************************************************
+***/
+/**********************************************************
+*** 触发动作命令
+**********************************************************/
+// 触发编码器校准 - 加载到多电机指令上
+void Emm_V5_MMCL_Trig_Encoder_Cal(uint8_t addr);
+// 重启电机 - 加载到多电机指令上
+void Emm_V5_MMCL_Reset_Motor(uint8_t addr);
+// 将当前位置清零 - 加载到多电机指令上
+void Emm_V5_MMCL_Reset_CurPos_To_Zero(uint8_t addr);
+// 解除堵转保护 - 加载到多电机指令上
+void Emm_V5_MMCL_Reset_Clog_Pro(uint8_t addr);
+// 恢复出厂设置 - 加载到多电机指令上
+void Emm_V5_MMCL_Restore_Motor(uint8_t addr);
+/**********************************************************
+*** 运动控制命令
+**********************************************************/
+// 电机使能控制 - 加载到多电机指令上
+void Emm_V5_MMCL_En_Control(uint8_t addr, bool state, bool snF);
+// 速度模式控制 - 加载到多电机指令上
+void Emm_V5_MMCL_Vel_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, bool snF);
+// 位置模式控制 - 加载到多电机指令上
+void Emm_V5_MMCL_Pos_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, uint32_t clk, bool raF, bool snF);
+// 让电机立即停止运动 - 加载到多电机指令上
+void Emm_V5_MMCL_Stop_Now(uint8_t addr, bool snF);
+// 触发多机同步开始运动 - 加载到多电机指令上
+void Emm_V5_MMCL_Synchronous_motion(uint8_t addr);
+/**********************************************************
+*** 原点回零命令
+**********************************************************/
+// 设置单圈回零的零点位置 - 加载到多电机指令上
+void Emm_V5_MMCL_Origin_Set_O(uint8_t addr, bool svF);
+// 触发回零 - 加载到多电机指令上
+void Emm_V5_MMCL_Origin_Trigger_Return(uint8_t addr, uint8_t o_mode, bool snF);
+// 强制中断并退出回零 - 加载到多电机指令上
+void Emm_V5_MMCL_Origin_Interrupt(uint8_t addr);
+// 修改回零参数 - 加载到多电机指令上
+void Emm_V5_MMCL_Origin_Modify_Params(uint8_t addr, bool svF, uint8_t o_mode, uint8_t o_dir, uint16_t o_vel, uint32_t o_tm, uint16_t sl_vel, uint16_t sl_ma, uint16_t sl_ms, bool potF);
+/**********************************************************
+*** 读取系统参数命令
+**********************************************************/
+// 定时返回信息命令（Y42） - 加载到多电机指令上
+void Emm_V5_MMCL_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t time_ms);
+// 读取系统参数 - 加载到多电机指令上
+void Emm_V5_MMCL_Read_Sys_Params(uint8_t addr, SysParams_t s);
+/**********************************************************
+*** 读写驱动参数命令
+**********************************************************/
+
+#endif
+
+############################################################
+#  文件: part/command_queue.h
+############################################################
+
+//运动指令环形队列
+//Parser→queue_push→队列→queue_pop→Planner
+#ifndef COMMAND_QUEUE_H
+#define COMMAND_QUEUE_H
+
+#include "main.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include "motioncmd.h"
+
+//队列最大长度，需要更大的缓存改这里
+#define COMMAND_QUEUE_SIZE    8
+
+void queue_init(void);
+void queue_clear(void);
+bool queue_push(const MotionCmd *cmd);
+bool queue_pop(MotionCmd *cmd);
+bool queue_is_empty(void);
+bool queue_is_full(void);
+uint16_t queue_size(void);
+
+#endif
+
+############################################################
+#  文件: part/distance.h
+############################################################
+
+//距离传感器
+//解析串口数据提取距离值，连续3次小于阈值判定
+#ifndef __DISTANCE_H
+#define __DISTANCE_H
+#include "main.h"
+#define buffer 64
+
+extern uint8_t distance_buffer[buffer];
+extern uint16_t distance;
+uint16_t Get_distance(void);
+uint8_t distancejudge(void);
+#endif
+
+############################################################
+#  文件: part/motion.h
+############################################################
+
+//运动执行模块
+//运动指令→CoreXY坐标变换→电机驱动，speed单位mm/min
+#ifndef MOTION_H
+#define MOTION_H
+
+#include "motioncmd.h"
+
+void go(float X, float Y, float speed_mm_min);
+
+void motion_execute(MotionCmd *cmd);
+
+#endif
+
+############################################################
+#  文件: part/motioncmd.h
+############################################################
+
+//运动命令数据结构
+//Parser→MotionCmd→Queue→Planner→Motor
+#ifndef MOTIONCMD_H
+#define MOTIONCMD_H
+#include "main.h"
+
+typedef enum
+{
+    MOTION_G0=0,  //快速移动
+    MOTION_G1     //直线运动
+} MotionType;
+
+typedef struct
+{
+    MotionType type;
+    float x;        //目标X坐标(mm)
+    float y;        //目标Y坐标(mm)
+    float speed;    //进给速度(mm/min)，0表示用默认值
+} MotionCmd;
+#endif
+
+############################################################
+#  文件: part/motor_serial.h
+############################################################
+
+//电机串口通讯
+//USART1 DMA+IDLE收电机回复，交替轮询两个电机状态
+#ifndef __MOTOR_SERIAL_H
+#define __MOTOR_SERIAL_H
+
+#include "main.h"
+
+typedef enum
+{
+    MOTOR_IDLE = 0,
+    MOTOR_RUNNING,
+    MOTOR_ERROR,
+    MOTOR_TIMEOUT
+} MotorState;
+
+typedef struct
+{
+    uint8_t id;
+    MotorState state;
+    uint8_t online;
+    uint32_t last_tick;
+    uint8_t expect_reply;
+} MotorInfo;
+
+void motor_serial_init(void);
+void motor_frame_parse(uint8_t *buf, uint16_t len);
+uint8_t motion_is_busy(void);
+void motor_watchdog(void);
+MotorInfo* get_motor_by_id(uint8_t id);
+
+#endif
+
+############################################################
+#  文件: part/normaldj.h
+############################################################
+
+//笔控制+舵机驱动
+//GPIO PB3方向+PWM脉冲控制抬笔落笔
+#ifndef __NORMAL_H
+#define __NORMAL_H
+
+void penrise(void);
+void pendown(void);
+void penstop(void);
+void motor_pulse_start(uint16_t pulse_count);
+
+#endif
+
+############################################################
+#  文件: part/parse.h
+############################################################
+
+//G-code解析器
+//串口收一行→解析→入队/执行
+#ifndef PARSE_H
+#define PARSE_H
+
+#include "main.h"
+#include <stdint.h>
+#include <stdbool.h>
+
+typedef enum
+{
+    PARSER_OK = 0,
+    PARSER_EMPTY_LINE,
+    PARSER_UNSUPPORTED_GCODE,
+    PARSER_FORMAT_ERROR,
+    PARSER_QUEUE_FULL
+} ParserResult;
+
+ParserResult parser_parse_line(const char *line);
+
+#endif
+
+############################################################
+#  文件: part/planner.h
+############################################################
+
+//运动规划器
+//从队列取指令→等上一段走完→等舵机到位→下发执行
+#ifndef PLANNER_H
+#define PLANNER_H
+
+void planner_init(void);
+void planner_process(void);
+void planner_wait_idle(void);
+
+typedef enum
+{
+    PLANNER_IDLE,
+    PLANNER_RUNNING,
+} PlannerState;
+
+void motor_poll(void);
+
+#endif
+
+############################################################
+#  文件: part/protocol.h
+############################################################
+
+//通讯协议
+//单字节状态码经USART3回传上位机
+#ifndef PROTOCOL_H
+#define PROTOCOL_H
+
+#include "main.h"
+#include "usart.h"
+#include <stdint.h>
+#include <stdbool.h>
+
+typedef enum
+{
+    PROTO_OK = 0x00,
+    PROTO_BUSY = 0x01,
+    PROTO_PARSE_ERROR = 0x02,
+    PROTO_UNSUPPORTED = 0x03
+} ProtoStatus;
+
+void protocol_send_status(ProtoStatus status);
+void protocol_handle_parser_result(int parser_result);
+
+#endif
+
+############################################################
+#  文件: part/serial.h
+############################################################
+
+//串口上位机通讯
+//USART3 DMA+IDLE收G-code，按行拆分交Parser
+#ifndef SERIAL_H
+#define SERIAL_H
+
+#include "main.h"
+#include <stdint.h>
+#include <stdbool.h>
+
+#define LINE_BUF_SIZE 64
+#define CMD_QUEUE_SIZE 32
+
+void serial_init(void);
+void serial_rx_callback(uint8_t *buf, uint16_t size);
+void serial_process(void);
+
+#endif
+
+############################################################
+#  文件: part/view.h
+############################################################
+
+//四角传感器检测
+//UART4收传感器帧，检测物体是否被移动
+#ifndef VIEW
+#define VIEW
+
+#include <stdint.h>
+#include "stm32f4xx_hal.h"
+
+uint8_t getflag(void);
+
+#endif
+
+############################################################
+#  文件: part/Emm_V5.c
+############################################################
+
+#include "Emm_V5.h"
+
+__IO uint16_t MMCL_count = 0, MMCL_cmd[MMCL_LEN] = {0};
+
+/**********************************************************
+*** 触发动作命令
+**********************************************************/
+/**
+  * @brief    触发编码器校准
+  * @param    addr  ：电机地址
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_Trig_Encoder_Cal(uint8_t addr)
+{
+  __IO static uint8_t cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0x06;                       // 功能码
+  cmd[2] =  0x45;                       // 辅助码
+  cmd[3] =  0x6B;                       // 校验字节
+  
+  // 发送命令
+	HAL_UART_Transmit_DMA(&huart1, (uint8_t *)cmd, 4);
+}
+
+
+
+/**********************************************************
+*** 运动控制命令
+**********************************************************/
+/**
+  * @brief    多电机命令（Y42）
+  * @param    addr  ：电机地址
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_Multi_Motor_Cmd(uint8_t addr)
+{
+  uint16_t i = 0, j = 0, len = 0; __IO static uint8_t cmd[MMCL_LEN] = {0};
+  
+	// 多电机命令长度大于0
+	if(MMCL_count > 0)
+	{
+		// 多电机命令的总字节数
+		len = MMCL_count + 5;
+		
+		// 装载命令
+		cmd[0] = addr;                       // 地址
+		cmd[1] = 0xAA;                       // 功能码
+		cmd[2] = (uint8_t)(len >> 8);				 // 总字节数高8位
+		cmd[3] = (uint8_t)(len); 		 				 // 总字节数低8位
+		for(i=0,j=4; i < MMCL_count; i++,j++) { cmd[j] = MMCL_cmd[i]; }
+		cmd[j] = 0x6B; ++j;                  // 校验字节
+		
+		// 发送命令
+		HAL_UART_Transmit_DMA(&huart1, (uint8_t *)cmd, j); MMCL_count = 0;
+	}
+	else
+	{
+		MMCL_count = 0;
+	}
+}
+
+/**
+  * @brief    使能信号控制
+  * @param    addr  ：电机地址
+  * @param    state ：使能状态     ，true为使能电机，false为关闭电机
+  * @param    snF   ：多机同步标志 ，false为不启用，true为启用
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_En_Control(uint8_t addr, bool state, bool snF)
+{
+  __IO static uint8_t cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0xF3;                       // 功能码
+  cmd[2] =  0xAB;                       // 辅助码
+  cmd[3] =  (uint8_t)state;             // 使能状态
+  cmd[4] =  snF;                        // 多机同步运动标志
+  cmd[5] =  0x6B;                       // 校验字节
+  
+  // 发送命令
+  HAL_UART_Transmit_DMA(&huart1, (uint8_t *)cmd, 6);
+}
+
+/**
+  * @brief    位置模式
+  * @param    addr：电机地址
+  * @param    dir ：方向        ，0为CW，其余值为CCW
+  * @param    vel ：速度(RPM)   ，范围0 - 5000RPM
+  * @param    acc ：加速度      ，范围0 - 255，注意：0是直接启动
+  * @param    clk ：脉冲数      ，范围0- (2^32 - 1)个
+  * @param    raF ：相位/绝对标志，false为相对运动，true为绝对值运动
+  * @param    snF ：多机同步标志 ，false为不启用，true为启用
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_Pos_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, uint32_t clk, bool raF, bool snF)
+{
+  __IO static uint8_t cmd[16] = {0};
+
+  // 装载命令
+  cmd[0]  =  addr;                      // 地址
+  cmd[1]  =  0xFD;                      // 功能码
+  cmd[2]  =  dir;                       // 方向
+  cmd[3]  =  (uint8_t)(vel >> 8);       // 速度(RPM)高8位字节
+  cmd[4]  =  (uint8_t)(vel >> 0);       // 速度(RPM)低8位字节 
+  cmd[5]  =  acc;                       // 加速度，注意：0是直接启动
+  cmd[6]  =  (uint8_t)(clk >> 24);      // 脉冲数(bit24 - bit31)
+  cmd[7]  =  (uint8_t)(clk >> 16);      // 脉冲数(bit16 - bit23)
+  cmd[8]  =  (uint8_t)(clk >> 8);       // 脉冲数(bit8  - bit15)
+  cmd[9]  =  (uint8_t)(clk >> 0);       // 脉冲数(bit0  - bit7 )
+  cmd[10] =  raF;                       // 相位/绝对标志，false为相对运动，true为绝对值运动
+  cmd[11] =  snF;                       // 多机同步运动标志，false为不启用，true为启用
+  cmd[12] =  0x6B;                      // 校验字节
+  
+  // 发送命令
+  HAL_UART_Transmit_DMA(&huart1, (uint8_t *)cmd, 13);
+}
+
+/**
+  * @brief    立即停止
+  * @param    addr  ：电机地址
+  * @param    snF   ：多机同步标志，false为不启用，true为启用
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_Stop_Now(uint8_t addr, bool snF)
+{
+  __IO static uint8_t cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0xFE;                       // 功能码
+  cmd[2] =  0x98;                       // 辅助码
+  cmd[3] =  snF;                        // 多机同步运动标志
+  cmd[4] =  0x6B;                       // 校验字节
+  
+  // 发送命令
+  HAL_UART_Transmit_DMA(&huart1, (uint8_t *)cmd, 5);
+}
+
+/**
+  * @brief    多机同步运动
+  * @param    addr  ：电机地址
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_Synchronous_motion(uint8_t addr)
+{
+  __IO static uint8_t cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0xFF;                       // 功能码
+  cmd[2] =  0x66;                       // 辅助码
+  cmd[3] =  0x6B;                       // 校验字节
+  
+  // 发送命令
+  HAL_UART_Transmit_DMA(&huart1, (uint8_t *)cmd, 4);
+}
+
+/**********************************************************
+*** 原点回零命令
+**********************************************************/
+
+
+/**
+***********************************************************
+***********************************************************
+*** 
+***
+*** @brief	以下是把相应命令加载到Y42多电机命令上的函数（Y42）
+***
+*** 
+***********************************************************
+***********************************************************
+***/
+/**********************************************************
+*** 触发动作命令
+**********************************************************/
+/**
+  * @brief    触发编码器校准 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Trig_Encoder_Cal(uint8_t addr)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0x06;                       // 功能码
+  cmd[2] =  0x45;                       // 辅助码
+  cmd[3] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    重启电机（Y42） - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Reset_Motor(uint8_t addr)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0x08;                       // 功能码
+  cmd[2] =  0x97;                       // 辅助码
+  cmd[3] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    将当前位置清零 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Reset_CurPos_To_Zero(uint8_t addr)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0x0A;                       // 功能码
+  cmd[2] =  0x6D;                       // 辅助码
+  cmd[3] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    解除堵转保护 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Reset_Clog_Pro(uint8_t addr)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0x0E;                       // 功能码
+  cmd[2] =  0x52;                       // 辅助码
+  cmd[3] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    恢复出厂设置 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Restore_Motor(uint8_t addr)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0x0F;                       // 功能码
+  cmd[2] =  0x5F;                       // 辅助码
+  cmd[3] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**********************************************************
+*** 运动控制命令
+**********************************************************/
+/**
+  * @brief    使能信号控制 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @param    state ：使能状态     ，true为使能电机，false为关闭电机
+  * @param    snF   ：多机同步标志 ，false为不启用，true为启用
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_En_Control(uint8_t addr, bool state, bool snF)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0xF3;                       // 功能码
+  cmd[2] =  0xAB;                       // 辅助码
+  cmd[3] =  (uint8_t)state;             // 使能状态
+  cmd[4] =  snF;                        // 多机同步运动标志
+  cmd[5] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 6; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    速度模式 - 加载到多电机指令上
+  * @param    addr：电机地址
+  * @param    dir ：方向       ，0为CW，其余值为CCW
+  * @param    vel ：速度       ，范围0 - 5000RPM
+  * @param    acc ：加速度     ，范围0 - 255，注意：0是直接启动
+  * @param    snF ：多机同步标志，false为不启用，true为启用
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Vel_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, bool snF)
+{
+  uint8_t j = 0, cmd[16] = {0};
+
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0xF6;                       // 功能码
+  cmd[2] =  dir;                        // 方向
+  cmd[3] =  (uint8_t)(vel >> 8);        // 速度(RPM)高8位字节
+  cmd[4] =  (uint8_t)(vel >> 0);        // 速度(RPM)低8位字节
+  cmd[5] =  acc;                        // 加速度，注意：0是直接启动
+  cmd[6] =  snF;                        // 多机同步运动标志
+  cmd[7] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 8; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    位置模式 - 加载到多电机指令上
+  * @param    addr：电机地址
+  * @param    dir ：方向        ，0为CW，其余值为CCW
+  * @param    vel ：速度(RPM)   ，范围0 - 5000RPM
+  * @param    acc ：加速度      ，范围0 - 255，注意：0是直接启动
+  * @param    clk ：脉冲数      ，范围0- (2^32 - 1)个
+  * @param    raF ：相位/绝对标志，false为相对运动，true为绝对值运动
+  * @param    snF ：多机同步标志 ，false为不启用，true为启用
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Pos_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, uint32_t clk, bool raF, bool snF)
+{
+  uint8_t j = 0, cmd[16] = {0};
+
+  // 装载命令
+  cmd[0]  =  addr;                      // 地址
+  cmd[1]  =  0xFD;                      // 功能码
+  cmd[2]  =  dir;                       // 方向
+  cmd[3]  =  (uint8_t)(vel >> 8);       // 速度(RPM)高8位字节
+  cmd[4]  =  (uint8_t)(vel >> 0);       // 速度(RPM)低8位字节 
+  cmd[5]  =  acc;                       // 加速度，注意：0是直接启动
+  cmd[6]  =  (uint8_t)(clk >> 24);      // 脉冲数(bit24 - bit31)
+  cmd[7]  =  (uint8_t)(clk >> 16);      // 脉冲数(bit16 - bit23)
+  cmd[8]  =  (uint8_t)(clk >> 8);       // 脉冲数(bit8  - bit15)
+  cmd[9]  =  (uint8_t)(clk >> 0);       // 脉冲数(bit0  - bit7 )
+  cmd[10] =  raF;                       // 相位/绝对标志，false为相对运动，true为绝对值运动
+  cmd[11] =  snF;                       // 多机同步运动标志，false为不启用，true为启用
+  cmd[12] =  0x6B;                      // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 13; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    立即停止 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @param    snF   ：多机同步标志，false为不启用，true为启用
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Stop_Now(uint8_t addr, bool snF)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0xFE;                       // 功能码
+  cmd[2] =  0x98;                       // 辅助码
+  cmd[3] =  snF;                        // 多机同步运动标志
+  cmd[4] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 5; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    多机同步运动 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Synchronous_motion(uint8_t addr)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0xFF;                       // 功能码
+  cmd[2] =  0x66;                       // 辅助码
+  cmd[3] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**********************************************************
+*** 原点回零命令
+**********************************************************/
+/**
+  * @brief    设置单圈回零的零点位置 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @param    svF   ：是否存储标志，false为不存储，true为存储
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Origin_Set_O(uint8_t addr, bool svF)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0x93;                       // 功能码
+  cmd[2] =  0x88;                       // 辅助码
+  cmd[3] =  svF;                        // 是否存储标志，false为不存储，true为存储
+  cmd[4] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 5; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    触发回零 - 加载到多电机指令上
+  * @param    addr   ：电机地址
+  * @param    o_mode ：回零模式，0为单圈就近回零，1为单圈方向回零，2为多圈无限位碰撞回零，3为多圈有限位开关回零
+  * @param    snF   ：多机同步标志，false为不启用，true为启用
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Origin_Trigger_Return(uint8_t addr, uint8_t o_mode, bool snF)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0x9A;                       // 功能码
+  cmd[2] =  o_mode;                     // 回零模式，0为单圈就近回零，1为单圈方向回零，2为多圈无限位碰撞回零，3为多圈有限位开关回零
+  cmd[3] =  snF;                        // 多机同步运动标志，false为不启用，true为启用
+  cmd[4] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 5; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    强制中断并退出回零 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Origin_Interrupt(uint8_t addr)
+{
+  uint8_t j = 0, cmd[16] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0x9C;                       // 功能码
+  cmd[2] =  0x48;                       // 辅助码
+  cmd[3] =  0x6B;                       // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    修改回零参数 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @param    svF   ：是否存储标志，false为不存储，true为存储
+  * @param    o_mode ：回零模式，0为单圈就近回零，1为单圈方向回零，2为多圈无限位碰撞回零，3为多圈有限位开关回零
+  * @param    o_dir  ：回零方向，0为CW，其余值为CCW
+  * @param    o_vel  ：回零速度，单位：RPM（转/分钟）
+  * @param    o_tm   ：回零超时时间，单位：毫秒
+  * @param    sl_vel ：无限位碰撞回零检测转速，单位：RPM（转/分钟）
+  * @param    sl_ma  ：无限位碰撞回零检测电流，单位：Ma（毫安）
+  * @param    sl_ms  ：无限位碰撞回零检测时间，单位：Ms（毫秒）
+  * @param    potF   ：上电自动触发回零，false为不使能，true为使能
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Origin_Modify_Params(uint8_t addr, bool svF, uint8_t o_mode, uint8_t o_dir, uint16_t o_vel, uint32_t o_tm, uint16_t sl_vel, uint16_t sl_ma, uint16_t sl_ms, bool potF)
+{
+  uint8_t j = 0, cmd[32] = {0};
+  
+  // 装载命令
+  cmd[0] =  addr;                       // 地址
+  cmd[1] =  0x4C;                       // 功能码
+  cmd[2] =  0xAE;                       // 辅助码
+  cmd[3] =  svF;                        // 是否存储标志，false为不存储，true为存储
+  cmd[4] =  o_mode;                     // 回零模式，0为单圈就近回零，1为单圈方向回零，2为多圈无限位碰撞回零，3为多圈有限位开关回零
+  cmd[5] =  o_dir;                      // 回零方向
+  cmd[6]  =  (uint8_t)(o_vel >> 8);     // 回零速度(RPM)高8位字节
+  cmd[7]  =  (uint8_t)(o_vel >> 0);     // 回零速度(RPM)低8位字节 
+  cmd[8]  =  (uint8_t)(o_tm >> 24);     // 回零超时时间(bit24 - bit31)
+  cmd[9]  =  (uint8_t)(o_tm >> 16);     // 回零超时时间(bit16 - bit23)
+  cmd[10] =  (uint8_t)(o_tm >> 8);      // 回零超时时间(bit8  - bit15)
+  cmd[11] =  (uint8_t)(o_tm >> 0);      // 回零超时时间(bit0  - bit7 )
+  cmd[12] =  (uint8_t)(sl_vel >> 8);    // 无限位碰撞回零检测转速(RPM)高8位字节
+  cmd[13] =  (uint8_t)(sl_vel >> 0);    // 无限位碰撞回零检测转速(RPM)低8位字节 
+  cmd[14] =  (uint8_t)(sl_ma >> 8);     // 无限位碰撞回零检测电流(Ma)高8位字节
+  cmd[15] =  (uint8_t)(sl_ma >> 0);     // 无限位碰撞回零检测电流(Ma)低8位字节 
+  cmd[16] =  (uint8_t)(sl_ms >> 8);     // 无限位碰撞回零检测时间(Ms)高8位字节
+  cmd[17] =  (uint8_t)(sl_ms >> 0);     // 无限位碰撞回零检测时间(Ms)低8位字节
+  cmd[18] =  potF;                      // 上电自动触发回零，false为不使能，true为使能
+  cmd[19] =  0x6B;                      // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < 20; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**********************************************************
+*** 读取系统参数命令
+**********************************************************/
+/**********************************************************
+*** 读取系统参数命令
+**********************************************************/
+/**
+  * @brief    定时返回信息命令（Y42）
+  * @param    addr  	：电机地址
+  * @param    s     	：系统参数类型
+	* @param    time_ms ：定时时间
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t time_ms)
+{
+  uint8_t i = 0, j = 0; uint8_t cmd[16] = {0};
+  
+  // 装载命令
+  cmd[i] = addr; ++i;                   // 地址
+
+  cmd[i] = 0x11; ++i;                   // 功能码
+
+  cmd[i] = 0x18; ++i;                   // 辅助码
+
+  switch(s)                             // 信息功能码
+  {
+    case S_VBUS : cmd[i] = 0x24; ++i; break;	// 读取总线电压
+		case S_CBUS : cmd[i] = 0x26; ++i; break;	// 读取总线电流
+    case S_CPHA : cmd[i] = 0x27; ++i; break;	// 读取相电流
+		case S_ENCO : cmd[i] = 0x29; ++i; break;	// 读取编码器原始值
+		case S_CLKC : cmd[i] = 0x30; ++i; break;	// 读取实时脉冲数
+    case S_ENCL : cmd[i] = 0x31; ++i; break;	// 读取经过线性化校准后的编码器值
+		case S_CLKI : cmd[i] = 0x32; ++i; break;	// 读取输入脉冲数
+    case S_TPOS : cmd[i] = 0x33; ++i; break;	// 读取电机目标位置
+    case S_SPOS : cmd[i] = 0x34; ++i; break;	// 读取电机实时设定的目标位置
+		case S_VEL  : cmd[i] = 0x35; ++i; break;	// 读取电机实时转速
+    case S_CPOS : cmd[i] = 0x36; ++i; break;	// 读取电机实时位置
+    case S_PERR : cmd[i] = 0x37; ++i; break;	// 读取电机位置误差
+		case S_VBAT : cmd[i] = 0x38; ++i; break;	// 读取多圈编码器电池电压（Y42）
+		case S_TEMP : cmd[i] = 0x39; ++i; break;	// 读取电机实时温度（Y42）
+    case S_FLAG : cmd[i] = 0x3A; ++i; break;	// 读取电机状态标志位
+    case S_OFLAG: cmd[i] = 0x3B; ++i; break;	// 读取回零状态标志位
+		case S_OAF  : cmd[i] = 0x3C; ++i; break;	// 读取电机状态标志位 + 回零状态标志位（Y42）
+		case S_PIN  : cmd[i] = 0x3D; ++i; break;	// 读取引脚状态（Y42）
+    default: break;
+  }
+	
+	cmd[i] = (uint8_t)(time_ms >> 8);  ++i;	// 定时时间
+	cmd[i] = (uint8_t)(time_ms >> 0);  ++i;
+
+  cmd[i] = 0x6B; ++i;                   	// 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < i; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief    读取系统参数 - 加载到多电机指令上
+  * @param    addr  ：电机地址
+  * @param    s     ：系统参数类型
+  * @retval   地址 + 功能码 + 命令状态 + 校验字节
+  */
+void Emm_V5_MMCL_Read_Sys_Params(uint8_t addr, SysParams_t s)
+{
+  uint8_t i = 0, j = 0; uint8_t cmd[16] = {0};
+  
+  // 装载命令
+  cmd[i] = addr; ++i;                   // 地址
+
+  switch(s)                             // 功能码
+  {
+    case S_VBUS : cmd[i] = 0x24; ++i; break;	// 读取总线电压
+		case S_CBUS : cmd[i] = 0x26; ++i; break;	// 读取总线电流
+    case S_CPHA : cmd[i] = 0x27; ++i; break;	// 读取相电流
+		case S_ENCO : cmd[i] = 0x29; ++i; break;	// 读取编码器原始值
+		case S_CLKC : cmd[i] = 0x30; ++i; break;	// 读取实时脉冲数
+    case S_ENCL : cmd[i] = 0x31; ++i; break;	// 读取经过线性化校准后的编码器值
+		case S_CLKI : cmd[i] = 0x32; ++i; break;	// 读取输入脉冲数
+    case S_TPOS : cmd[i] = 0x33; ++i; break;	// 读取电机目标位置
+    case S_SPOS : cmd[i] = 0x34; ++i; break;	// 读取电机实时设定的目标位置
+		case S_VEL  : cmd[i] = 0x35; ++i; break;	// 读取电机实时转速
+    case S_CPOS : cmd[i] = 0x36; ++i; break;	// 读取电机实时位置
+    case S_PERR : cmd[i] = 0x37; ++i; break;	// 读取电机位置误差
+		case S_VBAT : cmd[i] = 0x38; ++i; break;	// 读取多圈编码器电池电压（Y42）
+		case S_TEMP : cmd[i] = 0x39; ++i; break;	// 读取电机实时温度（Y42）
+    case S_FLAG : cmd[i] = 0x3A; ++i; break;	// 读取电机状态标志位
+    case S_OFLAG: cmd[i] = 0x3B; ++i; break;	// 读取回零状态标志位
+		case S_OAF  : cmd[i] = 0x3C; ++i; break;	// 读取电机状态标志位 + 回零状态标志位（Y42）
+		case S_PIN  : cmd[i] = 0x3D; ++i; break;	// 读取引脚状态（Y42）
+    default: break;
+  }
+
+  cmd[i] = 0x6B; ++i;                   // 校验字节
+  
+  // 加载当前命令到多电机命令中
+  for(j=0; j < i; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**********************************************************
+*** 读写驱动参数命令
+**********************************************************/
+void Emm_V5_Read_Sys_Params(uint8_t addr, SysParams_t s)
+{
+  uint8_t i = 0; __IO static uint8_t cmd[16] = {0};
+  
+  // 装载命令
+  cmd[i] = addr; ++i;                   // 地址
+
+  switch(s)                             // 功能码
+  {
+    case S_VBUS : cmd[i] = 0x24; ++i; break;	// 读取总线电压
+		case S_CBUS : cmd[i] = 0x26; ++i; break;	// 读取总线电流
+    case S_CPHA : cmd[i] = 0x27; ++i; break;	// 读取相电流
+		case S_ENCO : cmd[i] = 0x29; ++i; break;	// 读取编码器原始值
+		case S_CLKC : cmd[i] = 0x30; ++i; break;	// 读取实时脉冲数
+    case S_ENCL : cmd[i] = 0x31; ++i; break;	// 读取经过线性化校准后的编码器值
+		case S_CLKI : cmd[i] = 0x32; ++i; break;	// 读取输入脉冲数
+    case S_TPOS : cmd[i] = 0x33; ++i; break;	// 读取电机目标位置
+    case S_SPOS : cmd[i] = 0x34; ++i; break;	// 读取电机实时设定的目标位置
+		case S_VEL  : cmd[i] = 0x35; ++i; break;	// 读取电机实时转速
+    case S_CPOS : cmd[i] = 0x36; ++i; break;	// 读取电机实时位置
+    case S_PERR : cmd[i] = 0x37; ++i; break;	// 读取电机位置误差
+		case S_VBAT : cmd[i] = 0x38; ++i; break;	// 读取多圈编码器电池电压（Y42）
+		case S_TEMP : cmd[i] = 0x39; ++i; break;	// 读取电机实时温度（Y42）
+    case S_FLAG : cmd[i] = 0x3A; ++i; break;	// 读取电机状态标志位
+    case S_OFLAG: cmd[i] = 0x3B; ++i; break;	// 读取回零状态标志位
+		case S_OAF  : cmd[i] = 0x3C; ++i; break;	// 读取电机状态标志位 + 回零状态标志位（Y42）
+		case S_PIN  : cmd[i] = 0x3D; ++i; break;	// 读取引脚状态（Y42）
+    default: break;
+  }
+
+  cmd[i] = 0x6B; ++i;                   // 校验字节
+  
+  // 发送命令
+  HAL_UART_Transmit_DMA(&huart1, (uint8_t *)cmd, i);
+}
+
+############################################################
+#  文件: part/command_queue.c
+############################################################
+
+#include "command_queue.h"
+
+//环形队列缓冲区
+static MotionCmd queue_buffer[COMMAND_QUEUE_SIZE];
+
+//tail: Planner取走的位置
+static uint16_t tail = 0;
+
+//head: 下一个写入位置
+static uint16_t head = 0;
+
+//当前队列里的指令数
+static uint16_t count = 0;
+
+
+void queue_init(void)
+{
+    head = 0;
+    tail = 0;
+    count = 0;
+}
+
+
+void queue_clear(void)
+{
+    head = 0;
+    tail = 0;
+    count = 0;
+}
+
+
+bool queue_is_empty(void)
+{
+    return (count == 0);
+}
+
+
+bool queue_is_full(void)
+{
+    return (count >= COMMAND_QUEUE_SIZE);
+}
+
+
+uint16_t queue_size(void)
+{
+    return count;
+}
+
+
+bool queue_push(const MotionCmd *cmd)
+{
+    if(cmd == NULL)
+        return false;
+
+    if(queue_is_full())
+        return false;
+
+    //写入
+    queue_buffer[head] = *cmd;
+
+    //head前移，到末尾回0
+    head++;
+    if(head >= COMMAND_QUEUE_SIZE)
+        head = 0;
+
+    count++;
+    return true;
+}
+
+
+bool queue_pop(MotionCmd *cmd)
+{
+    if(cmd == NULL)
+        return false;
+
+    if(queue_is_empty())
+        return false;
+
+    //取出
+    *cmd = queue_buffer[tail];
+
+    //tail前移，到末尾回0
+    tail++;
+    if(tail >= COMMAND_QUEUE_SIZE)
+        tail = 0;
+
+    count--;
+    return true;
+}
+
+############################################################
+#  文件: part/distance.c
+############################################################
+
+#include "main.h"
+#include "distance.h"
+#define buffer 64
+
+uint8_t  distance_buffer[buffer];
+uint16_t  distance;
+uint16_t Get_distance()
+{
+	static uint8_t start = 0;
+	static uint8_t start_count = 0;
+	static uint8_t baiwei = 0;
+	static uint8_t shiwei = 0;
+	static uint8_t gewei = 0;
+	for(uint8_t count = 0;count<buffer;count++)
+	{
+		if(distance_buffer[count] == 0x3A )  //0x3A就是 ‘ ：’
+		{
+			start = 1;
+			start_count = count;  //记录此时的count数字
+			baiwei = 0;
+		    shiwei = 0;
+			gewei = 0;
+		}
+		if(start == 1)  //开始记录数据  两个空格，三个数据位    00128
+		{																										// 12345
+				
+				if(count - start_count > 2) //第一，二位恒为空,跳过第一，二位
+				{
+					switch(count - start_count)
+					{
+						case 3:
+						if(distance_buffer[count] == 0x20) baiwei = 0;
+						else
+						baiwei = distance_buffer[count] - '0';
+						break;
+						case 4:
+						if(distance_buffer[count] == 0x20) shiwei = 0;
+						else
+						shiwei = distance_buffer[count] - '0';
+						break;
+					  case 5:
+						if(distance_buffer[count] == 0x20) gewei = 0;
+						else
+						gewei = distance_buffer[count] - '0';
+						break;
+					}
+		  	}
+			  if(distance_buffer[count] == 0x0A)  //"0x0A"是/n 
+				{
+					start = 0;
+					start_count = 0;
+					distance =  baiwei * 100 + shiwei * 10 + gewei;
+//					baiwei = 0;
+//					shiwei = 0;
+//					gewei  = 0;
+					return distance;
+			  }
+			
+		}
+		
+	}
+	return distance;
+
+}
+uint8_t distancejudge(void)//判断距离是否小于设定值
+{
+	uint8_t standard_distance = 20;//设定的标准距离
+	static uint8_t time = 0;//满三次才返回1
+	if(distance <= standard_distance)
+	{
+		time++;
+		if(time >= 3)
+		{
+			time = 0;
+			return 1;
+		}
+	}
+	else
+	{
+		time = 0;
+	}
+	return 0;
+}
+
+############################################################
+#  文件: part/motion.c
+############################################################
+
+#include "main.h"
+#include "motion.h"
+#include "motioncmd.h"
+#include "normaldj.h"
+#include "Emm_V5.h"
+#include "motor_serial.h"
+
+#define STEPS_PER_MM 80.0f  // X=81.8 Y=78.1 校准取平均
+
+//坐标缩放：G-code坐标×SCALE→实际mm，物理行程不够时改小
+#define SCALE_FACTOR 0.95f
+
+//默认速度(mm/min)
+#define DEFAULT_G0_SPEED 2500.0f  //G0快速移动默认速度
+#define DEFAULT_G1_SPEED 1500.0f  //G1画线默认速度
+
+extern MotorInfo motor1;
+extern MotorInfo motor2;
+
+//运动到指定位置（CoreXY变换），speed为mm/min
+void go(float X, float Y, float speed_mm_min)
+{
+    //mm/min → step/s
+    uint16_t spd = (uint16_t)(speed_mm_min * STEPS_PER_MM / 60.0f);
+
+    Y = -Y;
+    int32_t A = (int32_t)((X+Y)*STEPS_PER_MM);
+    int32_t B = (int32_t)((X-Y)*STEPS_PER_MM);
+    uint8_t dira = 0;
+    uint8_t dirb = 0;
+    if(A<0) {A=-A; dira=1;}
+    if(B<0) {B=-B; dirb=1;}
+    Emm_V5_MMCL_Pos_Control(1, dira, spd, 245, A, 1, 1);
+    Emm_V5_MMCL_Pos_Control(2, dirb, spd, 245, B, 1, 1);
+    Emm_V5_Multi_Motor_Cmd(0);
+
+    motor1.state = MOTOR_RUNNING;
+    motor1.last_tick = HAL_GetTick();
+    motor2.state = MOTOR_RUNNING;
+    motor2.last_tick = HAL_GetTick();
+}
+
+extern bool g_manual_pen_mode;
+static bool pen_down = false;
+
+void motion_execute(MotionCmd *cmd)
+{
+    //手动模式(M3/M5)下不自动控制笔
+    if (!g_manual_pen_mode)
+    {
+        if (cmd->type == MOTION_G0)
+        {
+            if (pen_down) { penrise(); pen_down = false; }
+        }
+        else
+        {
+            if (!pen_down) { pendown(); pen_down = true; }
+        }
+    }
+
+    float x = cmd->x * SCALE_FACTOR;
+    float y = cmd->y * SCALE_FACTOR;
+
+    float spd = cmd->speed;
+    if (spd <= 0)
+        spd = (cmd->type == MOTION_G0) ? DEFAULT_G0_SPEED : DEFAULT_G1_SPEED;
+
+    go(x, y, spd);
+}
+
+############################################################
+#  文件: part/motioncmd.c
+############################################################
+
+#include "motioncmd.h"
+
+
+############################################################
+#  文件: part/motor_serial.c
+############################################################
+
+#include "motor_serial.h"
+#include "string.h"
+#include "stdio.h"
+
+#define MOTOR_RX_BUF_SIZE 128
+#define MOTOR_FRAME_MAX   128
+
+uint8_t motor_dma_buf[MOTOR_RX_BUF_SIZE];
+uint8_t motor_frame_buf[MOTOR_FRAME_MAX];
+
+MotorInfo motor1 = {0};
+MotorInfo motor2 = {0};
+
+MotorInfo* get_motor_by_id(uint8_t id)
+{
+    if(id == 1) return &motor1;
+    if(id == 2) return &motor2;
+    return NULL;
+}
+
+//初始化USART1 DMA+IDLE接收
+void motor_serial_init(void)
+{
+    memset(&motor1, 0, sizeof(MotorInfo));
+    memset(&motor2, 0, sizeof(MotorInfo));
+
+    motor1.id = 1;
+    motor2.id = 2;
+
+    HAL_UART_Receive_DMA(&huart1, motor_dma_buf, MOTOR_RX_BUF_SIZE);
+    __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+}
+
+//USART1中断
+void USART1_IRQHandler(void)
+{
+    if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE))
+    {
+        __HAL_UART_CLEAR_IDLEFLAG(&huart1);
+
+        HAL_UART_DMAStop(&huart1);
+
+        uint16_t len = MOTOR_RX_BUF_SIZE - __HAL_DMA_GET_COUNTER(huart1.hdmarx);
+
+        if(len > 0 && len < MOTOR_FRAME_MAX)
+        {
+            memcpy(motor_frame_buf, motor_dma_buf, len);
+            motor_frame_parse(motor_frame_buf, len);
+        }
+
+        HAL_UART_Receive_DMA(&huart1, motor_dma_buf, MOTOR_RX_BUF_SIZE);
+    }
+
+    HAL_UART_IRQHandler(&huart1);
+}
+
+//解析电机回复帧
+void motor_frame_parse(uint8_t *buf, uint16_t len)
+{
+    //电机回复格式(Read_Sys_Params S_FLAG):
+    //  短帧4字节: {id, func, status, 0x6B}
+    //  长帧7+字节: {id, func, dlc[2], data..., 0x6B}
+    if(len < 4) return;
+
+    for(int i = 0; i <= len - 4; i++)
+    {
+        uint8_t *frame = &buf[i];
+        uint8_t id   = frame[0];
+        uint8_t func = frame[1];
+
+        if(func < 0x20) continue;
+
+        uint8_t status;
+        uint8_t remain = (uint8_t)(len - i);
+
+        if(remain >= 7)
+        {
+            //先试长帧格式(带DLC)
+            uint16_t dlc = (uint16_t)frame[2];
+            if(dlc != 0x02)
+                dlc = ((uint16_t)frame[2] << 8) | frame[3];
+            if(dlc == 0x02)
+                status = frame[4];
+            else
+                status = frame[2];//DLC不匹配，按短帧处理
+        }
+        else
+        {
+            //短帧: frame[2]就是状态
+            status = frame[2];
+        }
+
+        MotorInfo *m = get_motor_by_id(id);
+        if(m == NULL) continue;
+
+        //S_FLAG状态字节含义: 0x00=待机, 0x01=运动中, 0x02=位置到达
+        switch(status)
+        {
+            case 0x00:
+            case 0x02:
+                m->state = MOTOR_IDLE;
+                break;
+
+            case 0x01:
+                m->state = MOTOR_RUNNING;
+                break;
+
+            default:
+                m->state = MOTOR_ERROR;
+                break;
+        }
+
+        m->online = 1;
+        m->last_tick = HAL_GetTick();
+        m->expect_reply = 0;
+
+        break;//找到一帧就够了
+    }
+}
+
+uint8_t motion_is_busy(void)
+{
+    if(motor1.state == MOTOR_RUNNING) return 1;
+    if(motor2.state == MOTOR_RUNNING) return 1;
+    return 0;
+}
+
+//超时监控
+#define MOTOR_TIMEOUT_MS 200
+
+void motor_watchdog(void)
+{
+    uint32_t now = HAL_GetTick();
+
+    MotorInfo *list[2] = {&motor1, &motor2};
+
+    for(int i = 0; i < 2; i++)
+    {
+        MotorInfo *m = list[i];
+
+        if(m->last_tick == 0)
+            continue;
+
+        if(now - m->last_tick > MOTOR_TIMEOUT_MS)
+        {
+            m->state = MOTOR_TIMEOUT;
+            m->online = 0;
+        }
+    }
+}
+
+############################################################
+#  文件: part/normaldj.c
+############################################################
+
+#include "main.h"
+#include "tim.h"
+#include "normaldj.h"
+
+extern volatile uint16_t pulse_remaining;//main.c定义
+
+//启动PWM发脉冲，发完自动停（软件计数，不限RCR的255上限）
+void motor_pulse_start(uint16_t pulse_count)
+{
+    if (pulse_count == 0) return;
+
+    //先停掉上次的
+    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+    __HAL_TIM_MOE_DISABLE(&htim1);
+
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 50);
+    __HAL_TIM_SET_AUTORELOAD(&htim1, 200);
+
+    //RCR=0，每个PWM周期触发更新中断，软件计数
+    htim1.Instance->RCR = 0;
+
+    pulse_remaining = pulse_count;
+
+    htim1.Instance->EGR |= TIM_EGR_UG;
+    __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
+
+    __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
+
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+    __HAL_TIM_MOE_ENABLE(&htim1);
+}
+
+//抬笔
+void penrise(void)
+{
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
+    motor_pulse_start(45);
+}
+
+//落笔
+void pendown(void)
+{
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
+    motor_pulse_start(45);
+}
+
+void penstop(void)
+{
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+}
+
+############################################################
+#  文件: part/parse.c
+############################################################
+
+#include "parse.h"
+#include "command_queue.h"
+#include "motioncmd.h"
+#include "normaldj.h"
+#include "planner.h"
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+
+//当前坐标模式：true=绝对(G90)，false=相对(G91)
+static bool is_absolute = true;
+
+//当前单位：true=mm(G21)，false=inch(G20)
+static bool is_mm = true;
+
+//当前坐标（G-code补全用）
+static float current_x = 0.0f;
+static float current_y = 0.0f;
+
+//当前进给速度(mm/min)
+static float current_f = 1500.0f;
+
+//手动笔模式：收到M3/M5后置true，G0/G1不再自动控制笔
+bool g_manual_pen_mode = false;
+
+//跳过空格
+static const char* skip_space(const char *str)
+{
+    while(*str == ' ' || *str == '\t')
+        str++;
+    return str;
+}
+
+//去掉行内的括号注释，如 "G1 X10 (cut here)" → "G1 X10 "
+static void strip_comment(char *line)
+{
+    char *s = line;
+    char *d = line;
+    int depth = 0;
+    while (*s)
+    {
+        if (*s == '(') { depth++; s++; continue; }
+        if (depth > 0)
+        {
+            if (*s == ')') { depth--; s++; continue; }
+            s++;
+            continue;
+        }
+        *d++ = *s++;
+    }
+    *d = '\0';
+}
+
+//解析一行G-code
+ParserResult parser_parse_line(const char *line_in)
+{
+    if(line_in == NULL)
+        return PARSER_EMPTY_LINE;
+
+    //拷贝到可修改的缓冲区，去掉注释
+    char line_buf[128];
+    strncpy(line_buf, line_in, sizeof(line_buf)-1);
+    line_buf[sizeof(line_buf)-1] = '\0';
+    strip_comment(line_buf);
+
+    const char *line = skip_space(line_buf);
+
+    if(*line == '\0')
+        return PARSER_EMPTY_LINE;
+
+    MotionCmd cmd;
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.speed = 0;
+
+    //========== G-code ==========
+
+    //G90 绝对坐标
+    if(strncmp(line, "G90", 3) == 0)
+    {
+        is_absolute = true;
+        return PARSER_OK;
+    }
+
+    //G91 相对坐标
+    if(strncmp(line, "G91", 3) == 0)
+    {
+        is_absolute = false;
+        return PARSER_OK;
+    }
+
+    //G17 XY平面（2D绘图默认）
+    if(strncmp(line, "G17", 3) == 0)
+        return PARSER_OK;
+
+    //G20 英寸（不支持，但明确拒绝）
+    if(strncmp(line, "G20", 3) == 0)
+        return PARSER_UNSUPPORTED_GCODE;
+
+    //G21 毫米
+    if(strncmp(line, "G21", 3) == 0)
+    {
+        is_mm = true;
+        return PARSER_OK;
+    }
+
+    //G4/G04 延时
+    if(strncmp(line, "G4", 2) == 0 || strncmp(line, "G04", 3) == 0)
+    {
+        const char *p = line;
+        while(*p)
+        {
+            p = skip_space(p);
+            if(*p == 'P')
+            {
+                p++;
+                char *end;
+                float delay = strtof(p, &end);
+                if(end != p)
+                {
+                    planner_wait_idle();
+                    HAL_Delay((uint32_t)(delay * 1000.0f));
+                }
+                break;
+            }
+            p++;
+        }
+        return PARSER_OK;
+    }
+
+    //G28 回零（空实现，防止报错）
+    if(strncmp(line, "G28", 3) == 0)
+        return PARSER_OK;
+
+    //G92 设置当前位置
+    if(strncmp(line, "G92", 3) == 0)
+    {
+        //解析X/Y参数设置坐标原点偏移
+        const char *p = line;
+        while(*p)
+        {
+            p = skip_space(p);
+            if(*p == 'X') { p++; char *e; current_x = strtof(p, &e); if(e!=p) p=e; else p++; }
+            else if(*p == 'Y') { p++; char *e; current_y = strtof(p, &e); if(e!=p) p=e; else p++; }
+            else p++;
+        }
+        return PARSER_OK;
+    }
+
+    //========== M代码 ==========
+
+    //M2/M30 程序结束
+    if(strncmp(line, "M2", 2) == 0 || strncmp(line, "M30", 3) == 0)
+    {
+        planner_wait_idle();
+        return PARSER_OK;
+    }
+
+    //M3 落笔（支持 M3Sxxx 格式）
+    if(strncmp(line, "M3", 2) == 0)
+    {
+        g_manual_pen_mode = true;
+        //顺便解析S参数（只存不实际用，笔没有转速概念）
+        const char *p = line;
+        while(*p)
+        {
+            p = skip_space(p);
+            if(*p == 'S') { p++; char *e; strtof(p, &e); if(e!=p) p=e; else p++; }
+            else p++;
+        }
+        planner_wait_idle();
+        pendown();
+        return PARSER_OK;
+    }
+
+    //M5 抬笔
+    if(strncmp(line, "M5", 2) == 0)
+    {
+        g_manual_pen_mode = true;
+        planner_wait_idle();
+        penrise();
+        return PARSER_OK;
+    }
+
+    //M84 释放电机
+    if(strncmp(line, "M84", 3) == 0)
+        return PARSER_OK;
+
+    //========== 运动指令 G0/G1 ==========
+
+    if(strncmp(line, "G0", 2) == 0 || strncmp(line, "G1", 2) == 0)
+    {
+        const char *g = line + 1;
+        while(*g == '0') g++;
+        cmd.type = (*g == '1') ? MOTION_G1 : MOTION_G0;
+
+        const char *p = line;
+        float x = current_x;
+        float y = current_y;
+        float f = 0;//本行指定的F值，0表示沿用上一次
+
+        while(*p)
+        {
+            p = skip_space(p);
+
+            if(*p == 'X')
+            {
+                p++;
+                char *end;
+                x = strtof(p, &end);
+                if(end == p) return PARSER_FORMAT_ERROR;
+                p = end;
+            }
+            else if(*p == 'Y')
+            {
+                p++;
+                char *end;
+                y = strtof(p, &end);
+                if(end == p) return PARSER_FORMAT_ERROR;
+                p = end;
+            }
+            else if(*p == 'F')
+            {
+                p++;
+                char *end;
+                f = strtof(p, &end);
+                if(end != p) current_f = f;
+                p = end;
+            }
+            else
+            {
+                p++;
+            }
+        }
+
+        cmd.speed = (f > 0) ? f : current_f;
+
+        if(is_absolute)
+        {
+            cmd.x = x;
+            cmd.y = y;
+        }
+        else
+        {
+            cmd.x = current_x + x;
+            cmd.y = current_y + y;
+        }
+
+        current_x = cmd.x;
+        current_y = cmd.y;
+
+        if(queue_push(&cmd))
+            return PARSER_OK;
+        else
+            return PARSER_QUEUE_FULL;
+    }
+
+    //F 单独一行（如 "F1500"），更新默认进给速度
+    if(strncmp(line, "F", 1) == 0)
+    {
+        const char *p = line + 1;
+        p = skip_space(p);
+        char *end;
+        float f = strtof(p, &end);
+        if(end != p) current_f = f;
+        return PARSER_OK;
+    }
+
+    //其他 M 代码，忽略
+    if(strncmp(line, "M", 1) == 0)
+        return PARSER_OK;
+
+    return PARSER_UNSUPPORTED_GCODE;
+}
+
+############################################################
+#  文件: part/planner.c
+############################################################
+
+#include "main.h"
+#include "planner.h"
+#include "command_queue.h"
+#include "motioncmd.h"
+#include "motion.h"
+#include "normaldj.h"
+#include "Emm_V5.h"
+#include "motor_serial.h"
+#include <stdbool.h>
+
+extern volatile uint16_t pulse_remaining;//舵机脉冲计数，main.c定义
+
+static uint32_t last_poll = 0;
+static uint8_t poll_motor = 0;
+
+static bool planner_busy = false;//当前是否正在运动
+
+void planner_init(void)
+{
+    planner_busy = false;
+}
+
+void planner_process(void)
+{
+    MotionCmd cmd;
+
+    //等上一段走完
+    if(planner_busy)
+    {
+        if(motion_is_busy())
+            return;
+
+        planner_busy = false;
+    }
+
+    //取一条指令
+    if(!queue_pop(&cmd))
+        return;
+
+    //笔控制由M3/M5在parse阶段处理
+
+    //等舵机到位
+    while (pulse_remaining > 0);
+
+    //执行
+    motion_execute(&cmd);
+
+    planner_busy = true;
+}
+
+//等所有运动走完（阻塞）
+void planner_wait_idle(void)
+{
+    while (1)
+    {
+        planner_process();
+        motor_poll();
+
+        if (queue_is_empty() && !motion_is_busy())
+            break;
+    }
+}
+
+//轮询电机状态+看门狗
+void motor_poll(void)
+{
+    if(HAL_GetTick() - last_poll < 2)
+        return;
+
+    last_poll = HAL_GetTick();
+
+    //两个电机共用RS-485，交替查询
+    if(poll_motor == 0)
+    {
+        Emm_V5_Read_Sys_Params(1, S_FLAG);
+        poll_motor = 1;
+    }
+    else
+    {
+        Emm_V5_Read_Sys_Params(2, S_FLAG);
+        poll_motor = 0;
+    }
+
+    motor_watchdog();
+}
+
+############################################################
+#  文件: part/protocol.c
+############################################################
+
+#include "protocol.h"
+#include "parse.h"
+
+//发送状态码到上位机
+void protocol_send_status(ProtoStatus status)
+{
+    HAL_UART_Transmit(&huart3,
+                      (uint8_t *)&status,
+                      1,
+                      100);
+}
+
+//Parser结果→状态码→发送
+void protocol_handle_parser_result(int parser_result)
+{
+    switch(parser_result)
+    {
+        case PARSER_OK:
+            protocol_send_status(PROTO_OK);
+            break;
+
+        case PARSER_QUEUE_FULL:
+            protocol_send_status(PROTO_BUSY);
+            break;
+
+        case PARSER_FORMAT_ERROR:
+            protocol_send_status(PROTO_PARSE_ERROR);
+            break;
+
+        case PARSER_UNSUPPORTED_GCODE:
+            protocol_send_status(PROTO_UNSUPPORTED);
+            break;
+
+        default:
+            protocol_send_status(PROTO_PARSE_ERROR);
+            break;
+    }
+}
+
+############################################################
+#  文件: part/serial.c
+############################################################
+
+#include "serial.h"
+#include "parse.h"
+#include "protocol.h"
+#include <string.h>
+
+volatile uint16_t uart_rx_len = 0;
+uint8_t uart_rx_buf[64];
+
+static char line_buf[128];
+static uint16_t line_index = 0;
+static volatile bool line_ready = false;
+
+//USART3 IDLE回调，按行拆分
+void serial_rx_callback(uint8_t *buf, uint16_t size)
+{
+    for(uint16_t i = 0; i < size; i++)
+    {
+        char c = (char)buf[i];
+
+        if(c == '\r')
+            continue;
+
+        if(c == '\n')
+        {
+            if(line_index > 0)
+            {
+                line_buf[line_index] = '\0';
+                line_ready = true;
+                line_index = 0;
+            }
+            break;
+        }
+        else
+        {
+            if(line_index < sizeof(line_buf)-1)
+                line_buf[line_index++] = c;
+            else
+                line_index = 0;
+        }
+    }
+}
+
+//主循环调用，每次处理一行
+void serial_process(void)
+{
+    if(!line_ready)
+        return;
+
+    ParserResult result = parser_parse_line(line_buf);
+
+    //队列满了就等下一轮，不消费这一行
+    if(result == PARSER_QUEUE_FULL)
+        return;
+
+    line_ready = false;
+
+    protocol_handle_parser_result(result);
+}
+
+############################################################
+#  文件: part/view.c
+############################################################
+
+#include "usart.h"
+#include "main.h"
+
+extern UART_HandleTypeDef huart4;
+
+uint8_t RxByte;
+volatile uint8_t viewflag = 0;
+float ltan=0;
+float rtan=0;
+extern uint16_t lo[];
+extern uint16_t ld[];
+extern uint16_t ro[];
+extern uint16_t rd[];
+volatile uint8_t interrupt = 0, overflag = 0;//interrupt表示是否检测到物体移动需处理,overflag表示运动是否结束
+uint16_t PointData[8];
+
+uint8_t getflag(void){
+	uint8_t t=0;
+	if(viewflag){viewflag=0;t=1;}
+	return t;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    static uint8_t RxState = 0;
+    static uint8_t Index = 0;
+    static uint8_t RxBuf[16];
+    static uint8_t time=0;
+    if(huart == &huart4)
+    {
+        uint8_t RxData = RxByte;
+
+        switch(RxState)
+        {
+            case 0:
+            {
+                if(RxData == 0xAA)
+                {
+                    Index = 0;
+                    RxState = 1;
+                }
+                break;
+            }
+
+            case 1:
+            {
+                RxBuf[Index++] = RxData;
+
+                if(Index >= 16)
+                {
+                    RxState = 2;
+                }
+
+                break;
+            }
+
+            case 2:
+            {
+                if(RxData == 0xFF)
+                {
+                    lo[0] = RxBuf[0]  | (RxBuf[1]  << 8);
+					lo[1] = RxBuf[2]  | (RxBuf[3]  << 8);
+			            
+			        ro[0] = RxBuf[4]  | (RxBuf[5]  << 8);
+			        ro[1] = RxBuf[6]  | (RxBuf[7]  << 8);
+			            
+			        ld[0] = RxBuf[8]  | (RxBuf[9]  << 8);
+			        ld[1] = RxBuf[10] | (RxBuf[11] << 8);
+			            
+			        rd[0] = RxBuf[12] | (RxBuf[13] << 8);
+			        rd[1] = RxBuf[14] | (RxBuf[15] << 8);
+
+                    viewflag =1;
+                    
+                    time++;
+                    if(overflag){overflag=0;time=0;}//如果运动已经结束了,就把time清零
+                    if(time>=1){interrupt=1;}//超时次数超过阈值则认为物体被移动,结束当前运动
+
+                }
+				else
+				{
+					RxState = 0; 
+				}
+                RxState = 0;
+                break;
+            }
+        }
+    }
+
+    HAL_UART_Receive_IT(&huart4, &RxByte, 1);
+}
+
+############################################################
+#  文件: Core/Src/main.c
+############################################################
+
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+#include "dma.h"
+#include "tim.h"
+#include "usart.h"
+#include "gpio.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+#include "Emm_V5.h"
+#include "motion.h"
+#include "view.h"
+#include "distance.h"
+#include <stdio.h>
+#include "normaldj.h"
+#include "protocol.h"
+#include "parse.h"
+#include "motioncmd.h"
+#include "command_queue.h"
+#include "serial.h"
+#include "planner.h"
+#include "motor_serial.h"
+/* USER CODE END Includes */
+
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+
+/* USER CODE BEGIN PV */
+extern uint8_t RxByte;
+extern volatile uint8_t overflag;
+extern uint8_t uart_rx_buf[64];
+
+
+#define MOTOR_RX_BUF_SIZE 128
+extern uint8_t usart1_rx_buf[MOTOR_RX_BUF_SIZE];
+extern uint8_t usart1_frame_buf[MOTOR_RX_BUF_SIZE];
+ uint32_t counter = 0;
+
+int16_t x=0,y=0;
+//lo,ld,ro,rd
+uint16_t lo[]={0,0};
+uint16_t ld[]={0,0};
+uint16_t ro[]={0,0};
+uint16_t rd[]={0,0};
+
+/* 软件脉冲计数，替代 RCR（RCR 硬件只有 8 位，最大 255）
+   normaldj.c 的 motor_pulse_start() 写入，回调里递减 */
+volatile uint16_t pulse_remaining = 0;
+
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+
+  /* USER CODE BEGIN 1 */
+
+  /* USER CODE END 1 */
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_USART1_UART_Init();
+  MX_TIM1_Init();
+  MX_UART4_Init();
+  MX_USART3_UART_Init();
+  /* USER CODE BEGIN 2 */
+  //__HAL_UART_CLEAR_IDLEFLAG(&huart3); 											// 清除IDLE标志	
+
+  //test=HAL_UARTEx_ReceiveToIdle_DMA(&huart3,distance_buffer,buffer);
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart3,uart_rx_buf,sizeof(uart_rx_buf));
+	HAL_UART_Receive_IT(&huart4, &RxByte, 1);
+ // state.view=0;
+ // state.go=0;
+ // state.over=0;
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+	HAL_Delay(500);
+	//Emm_V5_Pos_Control(1, 0, 100, 0, 3200, 0, 0);
+	
+/**********************************************************
+***	上电延时500毫秒等待闭环初始化完毕
+**********************************************************/
+	//while(rxFrameFlag == false); rxFrameFlag = false;
+  planner_init();
+  queue_init();
+  motor_serial_init();
+ // parser_init();
+
+  /* 中断优先级只需设一次 */
+  HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+
+  while (1)
+  {
+    serial_process();
+
+    planner_process();
+
+    motor_poll();
+
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+  }
+  /* USER CODE END 3 */
+}
+
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 72;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/* USER CODE BEGIN 4 */
+
+/**
+ * @brief  TIM1 更新中断回调（RCR=0，每个 PWM 周期触发一次）
+ *         由软件 pulse_remaining 计数，减到 0 时自动停止
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM1)
+    {
+        if (--pulse_remaining == 0)
+        {
+            HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+            __HAL_TIM_MOE_DISABLE(&htim1);
+            __HAL_TIM_DISABLE_IT(&htim1, TIM_IT_UPDATE);
+        }
+    }
+}
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{ 
+  if(huart != &huart3)
+  {
+    return;
+  }    
+  serial_rx_callback(uart_rx_buf, Size);
+
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart3,uart_rx_buf,sizeof(uart_rx_buf)
+);
+}
+/* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1)
+  {
+  }
+  /* USER CODE END Error_Handler_Debug */
+}
+#ifdef USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */
+
+############################################################
+#  文件: Core/Src/stm32f4xx_it.c
+############################################################
+
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file    stm32f4xx_it.c
+  * @brief   Interrupt Service Routines.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+#include "stm32f4xx_it.h"
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+#include "usart.h"
+#include "tim.h"
+/* USER CODE END Includes */
+
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN TD */
+
+/* USER CODE END TD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+/* USER CODE BEGIN PV */
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* USER CODE END 0 */
+
+/* External variables --------------------------------------------------------*/
+extern DMA_HandleTypeDef hdma_usart1_rx;
+extern DMA_HandleTypeDef hdma_usart1_tx;
+extern DMA_HandleTypeDef hdma_usart3_rx;
+extern DMA_HandleTypeDef hdma_usart3_tx;
+extern UART_HandleTypeDef huart4;
+extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart3;
+/* USER CODE BEGIN EV */
+
+/* USER CODE END EV */
+
+/******************************************************************************/
+/*           Cortex-M4 Processor Interruption and Exception Handlers          */
+/******************************************************************************/
+/**
+  * @brief This function handles Non maskable interrupt.
+  */
+void NMI_Handler(void)
+{
+  /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
+
+  /* USER CODE END NonMaskableInt_IRQn 0 */
+  /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
+   while (1)
+  {
+  }
+  /* USER CODE END NonMaskableInt_IRQn 1 */
+}
+
+/**
+  * @brief This function handles Hard fault interrupt.
+  */
+void HardFault_Handler(void)
+{
+  /* USER CODE BEGIN HardFault_IRQn 0 */
+
+  /* USER CODE END HardFault_IRQn 0 */
+  while (1)
+  {
+    /* USER CODE BEGIN W1_HardFault_IRQn 0 */
+    /* USER CODE END W1_HardFault_IRQn 0 */
+  }
+}
+
+/**
+  * @brief This function handles Memory management fault.
+  */
+void MemManage_Handler(void)
+{
+  /* USER CODE BEGIN MemoryManagement_IRQn 0 */
+
+  /* USER CODE END MemoryManagement_IRQn 0 */
+  while (1)
+  {
+    /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
+    /* USER CODE END W1_MemoryManagement_IRQn 0 */
+  }
+}
+
+/**
+  * @brief This function handles Pre-fetch fault, memory access fault.
+  */
+void BusFault_Handler(void)
+{
+  /* USER CODE BEGIN BusFault_IRQn 0 */
+
+  /* USER CODE END BusFault_IRQn 0 */
+  while (1)
+  {
+    /* USER CODE BEGIN W1_BusFault_IRQn 0 */
+    /* USER CODE END W1_BusFault_IRQn 0 */
+  }
+}
+
+/**
+  * @brief This function handles Undefined instruction or illegal state.
+  */
+void UsageFault_Handler(void)
+{
+  /* USER CODE BEGIN UsageFault_IRQn 0 */
+
+  /* USER CODE END UsageFault_IRQn 0 */
+  while (1)
+  {
+    /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
+    /* USER CODE END W1_UsageFault_IRQn 0 */
+  }
+}
+
+/**
+  * @brief This function handles System service call via SWI instruction.
+  */
+void SVC_Handler(void)
+{
+  /* USER CODE BEGIN SVCall_IRQn 0 */
+
+  /* USER CODE END SVCall_IRQn 0 */
+  /* USER CODE BEGIN SVCall_IRQn 1 */
+
+  /* USER CODE END SVCall_IRQn 1 */
+}
+
+/**
+  * @brief This function handles Debug monitor.
+  */
+void DebugMon_Handler(void)
+{
+  /* USER CODE BEGIN DebugMonitor_IRQn 0 */
+
+  /* USER CODE END DebugMonitor_IRQn 0 */
+  /* USER CODE BEGIN DebugMonitor_IRQn 1 */
+
+  /* USER CODE END DebugMonitor_IRQn 1 */
+}
+
+/**
+  * @brief This function handles Pendable request for system service.
+  */
+void PendSV_Handler(void)
+{
+  /* USER CODE BEGIN PendSV_IRQn 0 */
+
+  /* USER CODE END PendSV_IRQn 0 */
+  /* USER CODE BEGIN PendSV_IRQn 1 */
+
+  /* USER CODE END PendSV_IRQn 1 */
+}
+
+/**
+  * @brief This function handles System tick timer.
+  */
+void SysTick_Handler(void)
+{
+  /* USER CODE BEGIN SysTick_IRQn 0 */
+
+  /* USER CODE END SysTick_IRQn 0 */
+  HAL_IncTick();
+  /* USER CODE BEGIN SysTick_IRQn 1 */
+
+  /* USER CODE END SysTick_IRQn 1 */
+}
+
+/******************************************************************************/
+/* STM32F4xx Peripheral Interrupt Handlers                                    */
+/* Add here the Interrupt Handlers for the used peripherals.                  */
+/* For the available peripheral interrupt handler names,                      */
+/* please refer to the startup file (startup_stm32f4xx.s).                    */
+/******************************************************************************/
+
+/**
+  * @brief This function handles DMA1 stream1 global interrupt.
+  */
+void DMA1_Stream1_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream1_IRQn 0 */
+
+  /* USER CODE END DMA1_Stream1_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart3_rx);
+  /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA1 stream3 global interrupt.
+  */
+void DMA1_Stream3_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream3_IRQn 0 */
+
+  /* USER CODE END DMA1_Stream3_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart3_tx);
+  /* USER CODE BEGIN DMA1_Stream3_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART1 global interrupt.
+  */
+
+/**
+  * @brief This function handles USART3 global interrupt.
+  */
+void USART3_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART3_IRQn 0 */
+
+  /* USER CODE END USART3_IRQn 0 */
+  HAL_UART_IRQHandler(&huart3);
+  /* USER CODE BEGIN USART3_IRQn 1 */
+
+  /* USER CODE END USART3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UART4 global interrupt.
+  */
+void UART4_IRQHandler(void)
+{
+  /* USER CODE BEGIN UART4_IRQn 0 */
+
+  /* USER CODE END UART4_IRQn 0 */
+  HAL_UART_IRQHandler(&huart4);
+  /* USER CODE BEGIN UART4_IRQn 1 */
+
+  /* USER CODE END UART4_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA2 stream2 global interrupt.
+  */
+void DMA2_Stream2_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA2_Stream2_IRQn 0 */
+
+  /* USER CODE END DMA2_Stream2_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
+  /* USER CODE BEGIN DMA2_Stream2_IRQn 1 */
+
+  /* USER CODE END DMA2_Stream2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA2 stream7 global interrupt.
+  */
+void DMA2_Stream7_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA2_Stream7_IRQn 0 */
+
+  /* USER CODE END DMA2_Stream7_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_tx);
+  /* USER CODE BEGIN DMA2_Stream7_IRQn 1 */
+
+  /* USER CODE END DMA2_Stream7_IRQn 1 */
+}
+
+/* USER CODE BEGIN 1 */
+
+/**
+  * @brief This function handles TIM1 update interrupt.
+  *        RCR 倒数为 0 时触发，表示指定脉冲数已发完。
+  */
+void TIM1_UP_TIM10_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&htim1);
+}
+
+/* USER CODE END 1 */

@@ -11,7 +11,7 @@ extern uint16_t lo[];
 extern uint16_t ld[];
 extern uint16_t ro[];
 extern uint16_t rd[];
-volatile uint8_t interrupt = 0, overflag = 0;//����Ƿ��ƶ��Ӷ���Ҫ���,overflag��ʾ�Ƿ����
+volatile uint8_t interrupt = 0, overflag = 0;//interrupt表示是否检测到物体移动需处理,overflag表示运动是否结束
 uint16_t PointData[8];
 
 uint8_t getflag(void){
@@ -73,8 +73,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
                     viewflag =1;
                     
                     time++;
-                    if(overflag){overflag=0;time=0;}//����Ѿ�������˶����Ͱ�time����
-                    if(time>=1){interrupt=1;}//���ͳ����������Ϊ��ݱ��ƶ��ˣ���ϵ�ǰ���˶�
+                    if(overflag){overflag=0;time=0;}//如果运动已经结束了,就把time清零
+                    if(time>=1){interrupt=1;}//超时次数超过阈值则认为物体被移动,结束当前运动
 
                 }
 				else

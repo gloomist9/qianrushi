@@ -2,30 +2,14 @@
 #include "string.h"
 #include "stdio.h"
 
-/* =========================
-   基础定义
-   ========================= */
-
 #define MOTOR_RX_BUF_SIZE 128
 #define MOTOR_FRAME_MAX   128
-
-/* =========================
-   接收缓冲
-   ========================= */
 
 uint8_t motor_dma_buf[MOTOR_RX_BUF_SIZE];
 uint8_t motor_frame_buf[MOTOR_FRAME_MAX];
 
-/* =========================
-   电机对象
-   ========================= */
-
 MotorInfo motor1 = {0};
 MotorInfo motor2 = {0};
-
-/* =========================
-   获取电机
-   ========================= */
 
 MotorInfo* get_motor_by_id(uint8_t id)
 {
@@ -34,10 +18,7 @@ MotorInfo* get_motor_by_id(uint8_t id)
     return NULL;
 }
 
-/* =========================
-   初始化USART1 DMA + IDLE
-   ========================= */
-
+//初始化USART1 DMA+IDLE接收
 void motor_serial_init(void)
 {
     memset(&motor1, 0, sizeof(MotorInfo));
@@ -50,13 +31,9 @@ void motor_serial_init(void)
     __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
 }
 
-/* =========================
-   USART1中断入口
-   ========================= */
-
+//USART1中断
 void USART1_IRQHandler(void)
 {
-    /* IDLE中断 */
     if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE))
     {
         __HAL_UART_CLEAR_IDLEFLAG(&huart1);
@@ -64,7 +41,6 @@ void USART1_IRQHandler(void)
         HAL_UART_DMAStop(&huart1);
 
         uint16_t len = MOTOR_RX_BUF_SIZE - __HAL_DMA_GET_COUNTER(huart1.hdmarx);
-
 
         if(len > 0 && len < MOTOR_FRAME_MAX)
         {
@@ -78,18 +54,12 @@ void USART1_IRQHandler(void)
     HAL_UART_IRQHandler(&huart1);
 }
 
-/* =========================
-   帧解析入口
-   ========================= */
-
+//解析电机回复帧
 void motor_frame_parse(uint8_t *buf, uint16_t len)
 {
-    /*
-     * 电机回复格式（Read_Sys_Params 查询 S_FLAG）：
-     *   短帧 4 字节: {id, 0x03, status, 0x6B}
-     *   长帧 7+ 字节: {id, 0x03, dlc[2], data..., 0x6B}
-     * 最短帧 4 字节即可解析
-     */
+    //电机回复格式(Read_Sys_Params S_FLAG):
+    //  短帧4字节: {id, func, status, 0x6B}
+    //  长帧7+字节: {id, func, dlc[2], data..., 0x6B}
     if(len < 4) return;
 
     for(int i = 0; i <= len - 4; i++)
@@ -98,7 +68,6 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
         uint8_t id   = frame[0];
         uint8_t func = frame[1];
 
-        /* 电机回复功能码和查询一致（S_FLAG=0x3A），不固定为 0x03 */
         if(func < 0x20) continue;
 
         uint8_t status;
@@ -106,39 +75,29 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
 
         if(remain >= 7)
         {
-            /* 尝试长帧格式（带 DLC） */
+            //先试长帧格式(带DLC)
             uint16_t dlc = (uint16_t)frame[2];
             if(dlc != 0x02)
                 dlc = ((uint16_t)frame[2] << 8) | frame[3];
             if(dlc == 0x02)
                 status = frame[4];
             else
-            {
-                /* DLC 不匹配，当短帧处理 */
-                status = frame[2];
-            }
+                status = frame[2];//DLC不匹配，按短帧处理
         }
         else
         {
-            /* 短帧: {id, 0x03, status, 0x6B}，frame[2] 就是状态 */
+            //短帧: frame[2]就是状态
             status = frame[2];
         }
-
 
         MotorInfo *m = get_motor_by_id(id);
         if(m == NULL) continue;
 
-        /* ===== 状态解析（核心）=====
-         * S_FLAG 回复的 status 字节含义：
-         *   0x00 = 待机/空闲
-         *   0x01 = 正在运动
-         *   0x02 = 位置到达（运动完成，即 IDLE）
-         *   其他 = 错误状态
-         */
+        //S_FLAG状态字节含义: 0x00=待机, 0x01=运动中, 0x02=位置到达
         switch(status)
         {
             case 0x00:
-            case 0x02:   /* 位置到达 = IDLE */
+            case 0x02:
                 m->state = MOTOR_IDLE;
                 break;
 
@@ -155,28 +114,18 @@ void motor_frame_parse(uint8_t *buf, uint16_t len)
         m->last_tick = HAL_GetTick();
         m->expect_reply = 0;
 
-
-        /* 找到一帧就够 */
-        break;
+        break;//找到一帧就够了
     }
 }
-
-/* =========================
-   busy判断（planner用）
-   ========================= */
 
 uint8_t motion_is_busy(void)
 {
     if(motor1.state == MOTOR_RUNNING) return 1;
     if(motor2.state == MOTOR_RUNNING) return 1;
-
     return 0;
 }
 
-/* =========================
-   超时监控
-   ========================= */
-
+//超时监控
 #define MOTOR_TIMEOUT_MS 200
 
 void motor_watchdog(void)
@@ -199,4 +148,3 @@ void motor_watchdog(void)
         }
     }
 }
-

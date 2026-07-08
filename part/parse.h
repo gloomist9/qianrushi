@@ -1,32 +1,21 @@
+//G-codeè§£æå™¨
+//ä¸²å£æ”¶ä¸€è¡Œâ†’è§£æâ†’å…¥é˜Ÿ/æ‰§è¡Œ
 #ifndef PARSE_H
 #define PARSE_H
 
 #include "main.h"
-
 #include <stdint.h>
 #include <stdbool.h>
 
-/**
- * @brief ParserÖ´ĞĞ½á¹û
- */
 typedef enum
 {
     PARSER_OK = 0,
-
     PARSER_EMPTY_LINE,
-
     PARSER_UNSUPPORTED_GCODE,
-
     PARSER_FORMAT_ERROR,
-
     PARSER_QUEUE_FULL
 } ParserResult;
 
-/**
- * @brief ½âÎöÒ»ĞĞG-code
- *
- * @param line ÊäÈë×Ö·û´®
- */
 ParserResult parser_parse_line(const char *line);
 
 #endif
